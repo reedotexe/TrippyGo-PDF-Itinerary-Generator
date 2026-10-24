@@ -1,0 +1,96 @@
+services:
+  # 1. Next.js Web Application & API
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trippygo-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://trippygo:localdev@db:5432/trippygo
+      - RENDERER_SERVICE_URL=http://renderer:3001
+      - S3_ENDPOINT=http://minio:9000
+      - S3_BUCKET=trippygo-itineraries
+      - S3_ACCESS_KEY_ID=minioadmin
+      - S3_SECRET_ACCESS_KEY=minioadmin
+      - S3_FORCE_PATH_STYLE=true
+    env_file:
+      - path: .env
+        required: false
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      renderer:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  # 2. Playwright PDF Renderer Service (Isolated Headless Chromium)
+  renderer:
+    build:
+      context: ./services/renderer
+      dockerfile: Dockerfile
+    container_name: trippygo-renderer
+    shm_size: "2gb" # Crucial to prevent Chromium shared memory exhaustion during multi-page rendering
+    mem_limit: 4g
+    cpus: "2"
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # 3. PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: trippygo-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=trippygo
+      - POSTGRES_USER=trippygo
+      - POSTGRES_PASSWORD=localdev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trippygo -d trippygo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # 4. MinIO S3-Compatible Storage
+  minio:
+    image: minio/minio:RELEASE.2024-01-18T22-51-28Z
+    container_name: trippygo-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - miniodata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:

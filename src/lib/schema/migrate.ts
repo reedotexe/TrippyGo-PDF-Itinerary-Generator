@@ -1,0 +1,149 @@
+import { Itinerary, ItinerarySchema } from "./itinerary";
+
+/**
+ * Migration utility for Itinerary JSON documents.
+ * Ensures backward compatibility across schema changes and upgrades legacy records.
+ */
+export function migrateItinerarySchema(raw: unknown): Itinerary {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Invalid itinerary payload: expected an object");
+  }
+
+  const doc = { ...(raw as Record<string, any>) };
+
+  // 1. Check or assign schemaVersion
+  const currentVersion = doc.schemaVersion || 0;
+
+  // Migration from v0 to v1:
+  if (currentVersion < 1) {
+    console.log(`[Schema Migration] Migrating itinerary from v${currentVersion} to v1...`);
+
+    // Ensure package defaults with intelligent fallbacks
+    const rawPkg = doc.package || {};
+    const rawDays = Array.isArray(doc.days) ? doc.days : [];
+    const calculatedDays = typeof rawPkg.days === "number" && rawPkg.days >= 1
+      ? rawPkg.days
+      : rawDays.length > 0
+      ? rawDays.length
+      : 2;
+    const calculatedNights = typeof rawPkg.nights === "number" && rawPkg.nights >= 0
+      ? rawPkg.nights
+      : Math.max(0, calculatedDays - 1);
+
+    doc.package = {
+      title: rawPkg.title || "Untitled Itinerary",
+      destinations:
+        Array.isArray(rawPkg.destinations) && rawPkg.destinations.length > 0
+          ? rawPkg.destinations
+          : ["General Destination"],
+      nights: calculatedNights,
+      days: calculatedDays,
+      startDate: rawPkg.startDate || null,
+      travellers: {
+        adults: rawPkg.travellers?.adults || 2,
+        children: rawPkg.travellers?.children || 0,
+        rooms: rawPkg.travellers?.rooms || 1,
+      },
+    };
+
+    // Ensure pricing is structured with integer paise
+    if (!doc.pricing) {
+      doc.pricing = {
+        currency: "INR",
+        basis: "per_person_twin_sharing",
+        netAmountPaise: 0,
+        markup: { type: "percent", value: 15 },
+        gstMode: "inclusive",
+        gstRate: 0.05,
+        sacCode: "998552",
+        validityDays: 7,
+      };
+    } else {
+      // If legacy rupees were used, convert to paise
+      if (typeof doc.pricing.netAmount === "number" && !doc.pricing.netAmountPaise) {
+        doc.pricing.netAmountPaise = Math.round(doc.pricing.netAmount * 100);
+        delete doc.pricing.netAmount;
+      }
+
+      // Ensure markup is discriminated union
+      if (typeof doc.pricing.markup === "number") {
+        doc.pricing.markup = { type: "percent", value: doc.pricing.markup };
+      } else if (!doc.pricing.markup || !doc.pricing.markup.type) {
+        doc.pricing.markup = { type: "percent", value: 15 };
+      }
+
+      if (!doc.pricing.sacCode) doc.pricing.sacCode = "998552";
+      if (!doc.pricing.gstMode) doc.pricing.gstMode = "inclusive";
+      if (doc.pricing.gstRate === undefined) doc.pricing.gstRate = 0.05;
+      if (!doc.pricing.validityDays) doc.pricing.validityDays = 7;
+    }
+
+    // Ensure days array
+    if (!Array.isArray(doc.days) || doc.days.length === 0) {
+      doc.days = [
+        {
+          dayNumber: 1,
+          title: "Day 1 Arrival",
+          description: "Arrival at destination and check-in.",
+          activities: [],
+          meals: [],
+          stay: null,
+          imageQuery: "",
+          image: null,
+        },
+      ];
+    } else {
+      // Normalize days
+      doc.days = doc.days.map((d: any, idx: number) => ({
+        dayNumber: d.dayNumber || idx + 1,
+        title: d.title || `Day ${idx + 1}`,
+        description: d.description || "",
+        activities: Array.isArray(d.activities) ? d.activities : [],
+        meals: Array.isArray(d.meals) ? d.meals : [],
+        stay: d.stay || null,
+        imageQuery: d.imageQuery || "",
+        image: d.image || null,
+      }));
+    }
+
+    // Ensure inclusions and exclusions
+    if (!Array.isArray(doc.inclusions)) doc.inclusions = [];
+    if (!Array.isArray(doc.exclusions)) doc.exclusions = [];
+
+    // Ensure terms
+    if (!doc.terms) {
+      doc.terms = { payment: [], cancellation: [] };
+    }
+
+    // Ensure meta provenance
+    if (!doc.meta) {
+      doc.meta = {
+        sourceFile: null,
+        extractedBy: null,
+        reviewFlags: [],
+        extractedSnapshot: null,
+      };
+    }
+
+    // Ensure variants array
+    if (!Array.isArray(doc.variants)) {
+      doc.variants = [];
+    }
+
+    // Ensure flights array
+    if (!Array.isArray(doc.flights)) {
+      doc.flights = [];
+    }
+
+    // Set schemaVersion = 1
+    doc.schemaVersion = 1;
+  } else {
+    // If already v1, still guarantee flights is an array
+    if (!Array.isArray(doc.flights)) {
+      doc.flights = [];
+    }
+  }
+
+  // Validate resulting structure against single source of truth Zod schema
+  return ItinerarySchema.parse(doc);
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "file": "01_3day_goa.pdf",
+    "sizeBytes": 1465721,
+    "sizeKb": 1431.4,
+    "pageCount": 2,
+    "textSnippet": "TRIP AT A GLANCE Route: North Goa ➔ South Goa ✨ Airport transfer ✨ Calangute bea",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  },
+  {
+    "file": "02_7day_kashmir.pdf",
+    "sizeBytes": 1565737,
+    "sizeKb": 1529,
+    "pageCount": 4,
+    "textSnippet": "TRIP AT A GLANCE Route: Srinagar ➔ Gulmarg ➔ Pahalgam ✨ Airport transfer ✨ Shika",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  },
+  {
+    "file": "03_14day_grand_tour.pdf",
+    "sizeBytes": 2873287,
+    "sizeKb": 2805.9,
+    "pageCount": 5,
+    "textSnippet": "TRIP AT A GLANCE Route: Delhi ➔ Agra ➔ Jaipur ➔ Jodhpur ➔ Udaipur ➔ Jaisalmer ✨ ",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  },
+  {
+    "file": "04_no_image_day.pdf",
+    "sizeBytes": 707614,
+    "sizeKb": 691,
+    "pageCount": 2,
+    "textSnippet": "TRIP AT A GLANCE Route: North Goa ➔ South Goa ✨ Airport transfer ✨ Calangute bea",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  },
+  {
+    "file": "05_long_hotel_activities.pdf",
+    "sizeBytes": 711626,
+    "sizeKb": 694.9,
+    "pageCount": 2,
+    "textSnippet": "TRIP AT A GLANCE Route: North Goa ➔ South Goa ✨ Personalized Ayurvedic Doctor Co",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  },
+  {
+    "file": "06_no_cancellation.pdf",
+    "sizeBytes": 1464754,
+    "sizeKb": 1430.4,
+    "pageCount": 3,
+    "textSnippet": "TRIP AT A GLANCE Route: North Goa ➔ South Goa ✨ Airport transfer ✨ Calangute bea",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  },
+  {
+    "file": "07_zero_price_on_request.pdf",
+    "sizeBytes": 1467054,
+    "sizeKb": 1432.7,
+    "pageCount": 3,
+    "textSnippet": "TRIP AT A GLANCE Route: North Goa ➔ South Goa ✨ Airport transfer ✨ Calangute bea",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  },
+  {
+    "file": "08_hidden_inclusions.pdf",
+    "sizeBytes": 1466462,
+    "sizeKb": 1432.1,
+    "pageCount": 3,
+    "textSnippet": "TRIP AT A GLANCE Route: North Goa ➔ South Goa ✨ Airport transfer ✨ Calangute bea",
+    "hasSacCode": true,
+    "hasGstin": true,
+    "hasBrandHeader": true
+  }
+]

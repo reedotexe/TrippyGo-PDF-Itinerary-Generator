@@ -1,0 +1,67 @@
+{
+  "brand": {
+    "name": "TrippyGo",
+    "logoPath": "Brand Assets/TrippyGo/Trippygo Logo.png",
+    "colors": {
+      "primaryRed": "#c92229",
+      "primaryBlue": "#1556a6",
+      "textDark": "#1e293b",
+      "textMuted": "#64748b",
+      "bgLight": "#f8fafc",
+      "bgWhite": "#ffffff"
+    },
+    "fonts": {
+      "primary": "Inter, sans-serif",
+      "heading": "Montserrat, sans-serif"
+    }
+  },
+  "tax": {
+    "gstScheme": "5% inclusive (no ITC)",
+    "gstRate": 0.05,
+    "gstMode": "inclusive",
+    "sacCode": "998552",
+    "gstin": "27AABCT1234D1Z5",
+    "supplierNetIncludesGst": true
+  },
+  "pricing": {
+    "defaultBasis": "per_person_twin_sharing",
+    "childWithBedFactor": 0.70,
+    "childNoBedFactor": 0.40,
+    "infantFactor": 0.00,
+    "defaultMarkupPercent": 15,
+    "minMarginPercent": 8,
+    "overrideRules": {
+      "salespersonCanOverride": true,
+      "salespersonMarginRange": [8, 30],
+      "adminOverrideRequiredBelow": 8
+    },
+    "quoteValidityDays": 7
+  },
+  "pdf": {
+    "deliveryChannels": ["download", "whatsapp_link"],
+    "language": "en",
+    "showSalespersonContact": true,
+    "companyDetails": {
+      "phone": "+91 98765 43210",
+      "email": "holidays@trippygo.com",
+      "website": "https://trippygo.com",
+      "address": "Office 402, Trade Hub, Mumbai, Maharashtra 400001"
+    }
+  },
+  "auth": {
+    "system": "shared_jwt_session",
+    "sessionSchema": {
+      "id": "uuid",
+      "name": "string",
+      "email": "string",
+      "phone": "string",
+      "role": "admin | sales"
+    }
+  },
+  "infrastructure": {
+    "claudeModel": "claude-3-7-sonnet-20250219",
+    "s3Bucket": "trippygo-itineraries-dev",
+    "s3Region": "ap-south-1",
+    "databaseUrl": "postgresql://postgres:postgres@localhost:5432/trippygo_dev"
+  }
+}

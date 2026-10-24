@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-red: #c92229;
+    --brand-blue: #1556a6;
+    --brand-navy: #091c3e;
+    --brand-gold: #f59e0b;
+    --surface-tint-red: #fef2f2;
+    --surface-tint-blue: #eff6ff;
+    --surface-tint-gold: #fffbeb;
+    --surface-tint-green: #ecfdf5;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  @page {
+    size: A4 portrait;
+    margin: 8mm 6mm;
+  }
+}

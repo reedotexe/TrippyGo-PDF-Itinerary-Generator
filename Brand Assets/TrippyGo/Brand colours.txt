@@ -1,0 +1,4 @@
+TrippyGo Brand Colors:
+
+Red: #c92229   rgba(201, 34, 41)
+Blue: #1556a6   rgba(21, 86, 166)
