@@ -13,6 +13,7 @@ const CLIENT_DIRS = [
 ];
 
 const FORBIDDEN_SECRETS = [
+  "OPENAI_API_KEY",
   "ANTHROPIC_API_KEY",
   "OPENROUTER_API_KEY",
   "GEMINI_API_KEY",
@@ -25,6 +26,7 @@ const FORBIDDEN_SECRETS = [
 ];
 
 const FORBIDDEN_KEY_PATTERNS = [
+  /sk-(?:proj-)?[a-zA-Z0-9_\-]{20,}/, // Raw OpenAI key pattern
   /sk-ant-[a-zA-Z0-9_\-]{20,}/,    // Raw Anthropic key pattern
   /sk-or-v1-[a-zA-Z0-9_\-]{20,}/, // Raw OpenRouter key pattern
   /AIza[0-9A-Za-z-_]{35}/,        // Raw Google API key pattern

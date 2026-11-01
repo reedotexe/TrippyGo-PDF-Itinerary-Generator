@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getItinerary } from "@/lib/db/itineraries";
 import { renderItineraryToPdf } from "@/lib/pdf/render";
+import { getPresignedDownloadUrl } from "@/lib/storage/s3";
 import { createHash } from "crypto";
 import {
   checkRateLimit,
@@ -41,12 +42,23 @@ export async function POST(
       // Execute Playwright rendering service
       const renderResult = await renderItineraryToPdf(id, { baseUrl });
 
+      // Direct PDF file download link with fallback to print view
+      let pdfDownloadUrl = `/print/${id}?version=${renderResult.versionNumber}&preview=1&download=1`;
+      if (renderResult.pdfS3Key) {
+        try {
+          pdfDownloadUrl = await getPresignedDownloadUrl(renderResult.pdfS3Key);
+        } catch {
+          // fallback to print route
+        }
+      }
+
       return NextResponse.json({
         success: true,
         versionNumber: renderResult.versionNumber,
         pdfS3Key: renderResult.pdfS3Key,
         pdfJsonHash: renderResult.pdfJsonHash,
-        pdfUrl: `/print/${id}?version=${renderResult.versionNumber}&download=1`,
+        pdfUrl: pdfDownloadUrl,
+        printUrl: `/print/${id}?version=${renderResult.versionNumber}&preview=1`,
         message: "PDF generated and immutable version recorded successfully",
       });
     } catch (renderError) {
@@ -57,7 +69,7 @@ export async function POST(
 
       const jsonString = JSON.stringify(itinerary);
       const pdfJsonHash = createHash("sha256").update(jsonString).digest("hex");
-      const pdfUrl = `/print/${id}?download=1`;
+      const pdfUrl = `/print/${id}?preview=1&download=1`;
 
       return NextResponse.json({
         success: true,

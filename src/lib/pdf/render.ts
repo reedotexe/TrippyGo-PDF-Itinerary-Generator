@@ -162,24 +162,17 @@ async function renderLocally(targetUrl: string, itineraryId: string): Promise<Bu
     // Emulate print media type
     await page.emulateMedia({ media: "print" });
 
-    // Render A4 PDF with exact headers & footers
+    // Render A4 PDF with exact A4 dimensions and zero forced margins for full-bleed cover
     const pdfUint8Array = await page.pdf({
       format: "A4",
       printBackground: true,
       preferCSSPageSize: true,
-      displayHeaderFooter: true,
-      headerTemplate: '<div></div>',
-      footerTemplate: `
-        <div style="font-size: 8px; color: #94a3b8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 100%; padding: 0 10mm; display: flex; justify-content: space-between; align-items: center;">
-          <span>TrippyGo Holidays • Official Travel Itinerary</span>
-          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
-        </div>
-      `,
+      displayHeaderFooter: false,
       margin: {
-        top: "10mm",
-        bottom: "12mm",
-        left: "8mm",
-        right: "8mm",
+        top: "0px",
+        bottom: "0px",
+        left: "0px",
+        right: "0px",
       },
     });
 

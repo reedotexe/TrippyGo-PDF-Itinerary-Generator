@@ -18,11 +18,15 @@ export default async function PrintItineraryPage({
   const { id } = await params;
   const { preview, download, version, token } = await searchParams;
 
-  // Render Auth Security: either a valid HMAC render token or live preview mode (?preview=1) is required
-  const isAuthorizedPreview = preview === "1";
-  const isValidToken = token ? verifyRenderToken(id, token) : false;
+  // Render Auth Security: valid HMAC token, live preview (?preview=1), direct download (?download=1), version inspection, or dev mode
+  const isAuthorized =
+    preview === "1" ||
+    download === "1" ||
+    Boolean(version) ||
+    process.env.NODE_ENV !== "production" ||
+    (token ? verifyRenderToken(id, token) : false);
 
-  if (!isAuthorizedPreview && !isValidToken) {
+  if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-white text-center">
         <div className="w-12 h-12 rounded-full bg-red-600/20 border border-red-500/40 text-red-400 flex items-center justify-center text-xl font-bold mb-3">

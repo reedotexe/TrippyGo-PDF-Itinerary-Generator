@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { Itinerary } from "../schema/itinerary";
 import { migrateItinerarySchema } from "../schema/migrate";
 import { getPresignedDownloadUrl } from "../storage/s3";
+import { computeSellingPricePaise, formatInr } from "../pricing";
 import { db, itineraries, itineraryVersions } from "@/db";
 import { eq, desc } from "drizzle-orm";
 
@@ -241,4 +242,173 @@ export async function restoreItineraryVersion(
   const restoredData = migrateItinerarySchema(target.data);
   await saveItineraryData(itineraryId, restoredData);
   return restoredData;
+}
+
+export interface ItinerarySummary {
+  id: string;
+  title: string;
+  status: "draft" | "generated" | "archived";
+  guestName?: string;
+  destinations: string[];
+  daysCount: number;
+  nightsCount: number;
+  startDate?: string;
+  sellingPricePaise: number;
+  sellingPriceFormatted: string;
+  updatedAt: string;
+  createdAt: string;
+  hasPdf: boolean;
+  versionCount: number;
+}
+
+function toSummary(
+  id: string,
+  rawTitle: string,
+  rawStatus: string,
+  currentData: Itinerary,
+  createdAt: string | Date,
+  updatedAt: string | Date,
+  versions: VersionSummary[] = []
+): ItinerarySummary {
+  let data: any = currentData;
+  try {
+    data = migrateItinerarySchema(currentData);
+  } catch {
+    // If strict schema validation fails on incomplete drafts, use currentData directly
+    data = currentData || {};
+  }
+
+  const pkg = data.package || {};
+  const destinations = Array.isArray(pkg.destinations) ? pkg.destinations : [];
+  const daysCount = Array.isArray(data.days) ? data.days.length : (pkg.days || 1);
+  const nightsCount = pkg.nights || Math.max(0, daysCount - 1);
+
+  let sellingPricePaise = 0;
+  if (data.pricing?.netPricePaise && data.pricing?.markup) {
+    try {
+      sellingPricePaise = computeSellingPricePaise(data.pricing.netPricePaise, data.pricing.markup);
+    } catch {}
+  }
+  const sellingPriceFormatted = sellingPricePaise > 0 ? formatInr(sellingPricePaise) : "₹0";
+
+  const hasPdf = versions.some((v) => !!v.pdfS3Key) || versions.length > 0;
+  const status: "draft" | "generated" | "archived" = hasPdf ? "generated" : "draft";
+
+  return {
+    id,
+    title: pkg.title || rawTitle || "Untitled Itinerary",
+    status,
+    guestName: pkg.guestName?.trim() || undefined,
+    destinations,
+    daysCount,
+    nightsCount,
+    startDate: pkg.startDate || undefined,
+    sellingPricePaise,
+    sellingPriceFormatted,
+    updatedAt: typeof updatedAt === "string" ? updatedAt : updatedAt.toISOString(),
+    createdAt: typeof createdAt === "string" ? createdAt : createdAt.toISOString(),
+    hasPdf,
+    versionCount: versions.length,
+  };
+}
+
+function filterSummaries(
+  items: ItinerarySummary[],
+  query?: { search?: string; status?: string }
+): ItinerarySummary[] {
+  let result = items;
+  if (query?.search && query.search.trim()) {
+    const term = query.search.toLowerCase().trim();
+    result = result.filter(
+      (item) =>
+        item.title.toLowerCase().includes(term) ||
+        (item.guestName && item.guestName.toLowerCase().includes(term)) ||
+        item.destinations.some((d) => d.toLowerCase().includes(term))
+    );
+  }
+  if (query?.status && query.status !== "all") {
+    result = result.filter((item) => item.status === query.status);
+  }
+  return result;
+}
+
+export async function listItineraries(query?: {
+  search?: string;
+  status?: string;
+}): Promise<ItinerarySummary[]> {
+  const summaries: ItinerarySummary[] = [];
+
+  // 1. Try DB
+  try {
+    const rows = await db.select().from(itineraries).orderBy(desc(itineraries.updatedAt));
+    if (rows && rows.length > 0) {
+      for (const row of rows) {
+        let versions: VersionSummary[] = [];
+        try {
+          const vRows = await db
+            .select()
+            .from(itineraryVersions)
+            .where(eq(itineraryVersions.itineraryId, row.id))
+            .orderBy(desc(itineraryVersions.versionNumber));
+          versions = vRows.map((r) => ({
+            id: r.id,
+            itineraryId: r.itineraryId,
+            versionNumber: r.versionNumber,
+            data: r.data,
+            changedAt: r.changedAt.toISOString(),
+            pdfS3Key: r.pdfS3Key || undefined,
+          }));
+        } catch {}
+
+        summaries.push(
+          toSummary(row.id, row.title, row.status, row.currentData, row.createdAt, row.updatedAt, versions)
+        );
+      }
+      return filterSummaries(summaries, query);
+    }
+  } catch (err) {
+    // DB offline, fallback to local store
+  }
+
+  // 2. Local store fallback
+  const store = getLocalStore();
+  const entries = Object.values(store.itineraries || {});
+  for (const entry of entries) {
+    const versions = store.versions[entry.id] || [];
+    summaries.push(
+      toSummary(
+        entry.id,
+        entry.title,
+        entry.status,
+        entry.currentData,
+        entry.createdAt || entry.updatedAt,
+        entry.updatedAt,
+        versions
+      )
+    );
+  }
+
+  summaries.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return filterSummaries(summaries, query);
+}
+
+export async function deleteItinerary(id: string): Promise<boolean> {
+  // 1. Try DB
+  try {
+    await db.delete(itineraryVersions).where(eq(itineraryVersions.itineraryId, id));
+    await db.delete(itineraries).where(eq(itineraries.id, id));
+  } catch (err) {
+    // DB offline or error
+  }
+
+  // 2. Local store
+  const store = getLocalStore();
+  if (store.itineraries && store.itineraries[id]) {
+    delete store.itineraries[id];
+    if (store.versions) {
+      delete store.versions[id];
+    }
+    saveLocalStore(store);
+  }
+  return true;
 }

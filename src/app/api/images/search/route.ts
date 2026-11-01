@@ -23,6 +23,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query")?.trim() || "";
     const page = parseInt(searchParams.get("page") || "1", 10) || 1;
+    const orientationParam = searchParams.get("orientation")?.toLowerCase();
+    const orientation =
+      orientationParam === "portrait" || orientationParam === "all"
+        ? orientationParam
+        : "landscape";
 
     if (!query) {
       return NextResponse.json(
@@ -31,11 +36,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const images = await searchImages(query, page);
+    const images = await searchImages(query, page, orientation);
 
     return NextResponse.json({
       success: true,
       query,
+      orientation,
       page,
       count: images.length,
       images,

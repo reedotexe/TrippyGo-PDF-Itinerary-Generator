@@ -99,6 +99,11 @@ export async function uploadSourceFile(
  * Generate a pre-signed S3 download URL (default 1-hour expiry) with local file fallback
  */
 export async function getPresignedDownloadUrl(key: string, expiresIn: number = 3600): Promise<string> {
+  const localFilePath = path.join(process.cwd(), ".uploads", key);
+  if (fs.existsSync(localFilePath)) {
+    return `/api/storage/download?key=${encodeURIComponent(key)}`;
+  }
+
   try {
     const client = getS3Client();
     const command = new GetObjectCommand({

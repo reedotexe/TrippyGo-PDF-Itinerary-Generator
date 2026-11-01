@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { ItineraryDay } from "@/lib/schema/itinerary";
 import {
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   ChevronDown,
   Copy,
@@ -11,8 +13,15 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Check,
+  CalendarDays,
+  Utensils,
+  Coffee,
+  Moon,
+  Sparkles,
+  Bed,
+  MapPin,
+  Building,
 } from "lucide-react";
-
 import ImagePickerModal from "./ImagePickerModal";
 
 interface DaysPanelProps {
@@ -21,10 +30,26 @@ interface DaysPanelProps {
   reviewFlags?: Array<{ field: string; issue: string; severity: string }>;
 }
 
-export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPanelProps) {
+const COMMON_ACTIVITY_PRESETS = [
+  "City Tour",
+  "Leisure & Shopping",
+  "Sunset Cruise",
+  "Sightseeing & Photography",
+  "Local Market Walk",
+  "Cultural Show",
+  "Beach Relaxation",
+  "Adventure Sports",
+];
+
+export default function DaysPanel({
+  days,
+  onChange,
+  reviewFlags = [],
+}: DaysPanelProps) {
   const [activeTab, setActiveTab] = useState<number>(1);
   const [newActivity, setNewActivity] = useState<Record<number, string>>({});
   const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
+  const stepperScrollRef = useRef<HTMLDivElement>(null);
 
   const getFlag = (dayIndex: number, fieldName: string) => {
     return reviewFlags.find(
@@ -58,11 +83,21 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
       activities: [],
       meals: ["Breakfast"],
       stay: null,
-      imageQuery: "Scenic landscape",
+      imageQuery: "",
       image: null,
     };
     onChange([...days, newDay]);
     setActiveTab(newDayNum);
+
+    // Scroll stepper to end
+    setTimeout(() => {
+      if (stepperScrollRef.current) {
+        stepperScrollRef.current.scrollTo({
+          left: stepperScrollRef.current.scrollWidth,
+          behavior: "smooth",
+        });
+      }
+    }, 100);
   };
 
   const handleDuplicateDay = (index: number) => {
@@ -91,8 +126,13 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
     setActiveTab(Math.min(activeTab, renumbered.length));
   };
 
-  const handleUpdateDay = (index: number, updatedFields: Partial<ItineraryDay>) => {
-    const updated = days.map((d, i) => (i === index ? { ...d, ...updatedFields } : d));
+  const handleUpdateDay = (
+    index: number,
+    updatedFields: Partial<ItineraryDay>
+  ) => {
+    const updated = days.map((d, i) =>
+      i === index ? { ...d, ...updatedFields } : d
+    );
     onChange(updated);
   };
 
@@ -104,11 +144,13 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
     handleUpdateDay(dayIndex, { meals: newMeals });
   };
 
-  const handleAddActivity = (dayIndex: number) => {
-    const text = (newActivity[dayIndex] || "").trim();
+  const handleAddActivity = (dayIndex: number, activityText?: string) => {
+    const text = (activityText || newActivity[dayIndex] || "").trim();
     if (!text) return;
     const currentActs = days[dayIndex].activities || [];
-    handleUpdateDay(dayIndex, { activities: [...currentActs, text] });
+    if (!currentActs.includes(text)) {
+      handleUpdateDay(dayIndex, { activities: [...currentActs, text] });
+    }
     setNewActivity({ ...newActivity, [dayIndex]: "" });
   };
 
@@ -117,6 +159,16 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
     handleUpdateDay(dayIndex, {
       activities: currentActs.filter((_, i) => i !== actIndex),
     });
+  };
+
+  const scrollStepper = (direction: "left" | "right") => {
+    if (stepperScrollRef.current) {
+      const scrollAmount = direction === "left" ? -200 : 200;
+      stepperScrollRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: "smooth",
+      });
+    }
   };
 
   const currentDay = days[activeTab - 1] || days[0];
@@ -129,64 +181,163 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
   const hotelFlag = getFlag(currentIndex, "stay.hotel");
 
   return (
-    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-          <span>🗺️</span> Day-by-Day Itinerary ({days.length} Days)
-        </h3>
+    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6 font-body">
+      {/* 1. HEADER BAR: Title & Action Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-lg bg-[#091c3e] text-white shadow-2xs">
+              <CalendarDays className="w-4 h-4 text-amber-400" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Day-by-Day Journey Plan
+                </h3>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  {days.length} Day{days.length > 1 ? "s" : ""} Total
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Daily itinerary narratives, stays, meals, and curated visual photo banners.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={handleAddDay}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm transition"
+          className="px-3.5 py-2 bg-[#091c3e] hover:bg-[#132c5b] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shrink-0 self-start sm:self-auto"
         >
-          <Plus className="w-3.5 h-3.5" /> Add Day
+          <Plus className="w-3.5 h-3.5 text-amber-400" />
+          <span>Add Day</span>
         </button>
       </div>
 
-      {/* Day Selector Pill Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-        {days.map((day, i) => {
-          const hasFlag = reviewFlags.some((f) => f.field.startsWith(`days.${i}`));
-          const isActive = activeTab === day.dayNumber;
+      {/* 2. FIX 4.1: HORIZONTAL DAY STEPPER (Smooth scrollable pills) */}
+      <div className="relative flex items-center gap-1">
+        {/* Scroll Left Button */}
+        <button
+          type="button"
+          onClick={() => scrollStepper("left")}
+          aria-label="Scroll days left"
+          className="w-7 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 transition shadow-2xs disabled:opacity-30"
+          title="Scroll days left"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
 
-          return (
-            <button
-              key={day.dayNumber}
-              type="button"
-              onClick={() => setActiveTab(day.dayNumber)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
-                isActive
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              } ${hasFlag ? "ring-2 ring-amber-400" : ""}`}
-            >
-              <span>Day {day.dayNumber}</span>
-              {hasFlag && <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>}
-            </button>
-          );
-        })}
+        {/* Scrollable Day Stepper Pills Container */}
+        <div
+          ref={stepperScrollRef}
+          role="tablist"
+          aria-label="Itinerary Days Stepper"
+          className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-1"
+        >
+          {days.map((day, i) => {
+            const hasFlag = reviewFlags.some((f) =>
+              f.field.startsWith(`days.${i}`)
+            );
+            const isActive = activeTab === day.dayNumber;
+            const paddedNum = String(day.dayNumber).padStart(2, "0");
+            const stayLocation = day.stay?.city || day.stay?.hotel || "";
+
+            return (
+              <button
+                key={day.dayNumber}
+                type="button"
+                id={`day-tab-${day.dayNumber}`}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls="panel-day-content"
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(day.dayNumber)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    const nextDay = days[(i + 1) % days.length];
+                    setActiveTab(nextDay.dayNumber);
+                    document.getElementById(`day-tab-${nextDay.dayNumber}`)?.focus();
+                  } else if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    const prevDay = days[(i - 1 + days.length) % days.length];
+                    setActiveTab(prevDay.dayNumber);
+                    document.getElementById(`day-tab-${prevDay.dayNumber}`)?.focus();
+                  }
+                }}
+                className={`group px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 border select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                  isActive
+                    ? "bg-[#091c3e] text-white border-[#091c3e] shadow-xs ring-2 ring-[#091c3e]/15"
+                    : "bg-slate-50 text-slate-700 hover:bg-slate-100/90 border-slate-200 hover:border-slate-300"
+                } ${hasFlag ? "ring-2 ring-amber-400" : ""}`}
+              >
+                <div className="flex flex-col text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span>Day {paddedNum}</span>
+                    {hasFlag && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    )}
+                  </div>
+                  {stayLocation && (
+                    <span
+                      className={`text-[9px] font-normal truncate max-w-[80px] -mt-0.5 ${
+                        isActive ? "text-amber-300/90" : "text-slate-400"
+                      }`}
+                    >
+                      {stayLocation}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Scroll Right Button */}
+        <button
+          type="button"
+          onClick={() => scrollStepper("right")}
+          aria-label="Scroll days right"
+          className="w-7 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 transition shadow-2xs disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          title="Scroll days right"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Active Day Detail Card */}
-      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-5">
-        {/* Day Actions Bar */}
-        <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
-              {currentDay.dayNumber}
+      {/* 3. ACTIVE DAY DETAIL WORKBENCH */}
+      <div
+        id="panel-day-content"
+        role="tabpanel"
+        aria-labelledby={`day-tab-${currentDay.dayNumber}`}
+        className="p-5 rounded-2xl border border-slate-200/90 bg-white space-y-5 shadow-2xs"
+      >
+        {/* Workbench Top Bar: Sequence Indicator & Reorder Actions */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-lg bg-[#091c3e] text-white flex items-center justify-center text-xs font-bold shadow-2xs font-mono">
+              #{String(currentDay.dayNumber).padStart(2, "0")}
             </span>
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Editing Day {currentDay.dayNumber} of {days.length}
-            </span>
+            <div>
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                Editing Day {currentDay.dayNumber} of {days.length}
+              </span>
+              <span className="text-[11px] text-slate-400 block -mt-0.5">
+                Changes autosave instantly to itinerary state.
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* Reorder and Duplicate Controls */}
+          <div className="flex items-center gap-1">
             <button
               type="button"
               disabled={currentIndex === 0}
               onClick={() => handleMove(currentIndex, "up")}
               title="Move day earlier"
-              className="p-1.5 rounded hover:bg-slate-200 text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent"
+              aria-label="Move day earlier"
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition"
             >
               <ChevronUp className="w-4 h-4" />
             </button>
@@ -195,172 +346,278 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
               disabled={currentIndex === days.length - 1}
               onClick={() => handleMove(currentIndex, "down")}
               title="Move day later"
-              className="p-1.5 rounded hover:bg-slate-200 text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent"
+              aria-label="Move day later"
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition"
             >
               <ChevronDown className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => handleDuplicateDay(currentIndex)}
-              title="Duplicate day"
-              className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+              title="Duplicate this day"
+              aria-label="Duplicate this day"
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition"
             >
               <Copy className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => handleDeleteDay(currentIndex)}
-              title="Delete day"
-              className="p-1.5 rounded hover:bg-red-100 text-red-600"
+              title="Delete this day"
+              aria-label="Delete this day"
+              className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Day Title */}
+        {/* Day Title Input */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+          <label
+            htmlFor={`day-${currentIndex}-title`}
+            className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1"
+          >
             Day Title *
           </label>
           <input
+            id={`day-${currentIndex}-title`}
             type="text"
             value={currentDay.title}
-            onChange={(e) => handleUpdateDay(currentIndex, { title: e.target.value })}
-            className={`w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 ${
+            onChange={(e) =>
+              handleUpdateDay(currentIndex, { title: e.target.value })
+            }
+            className={`w-full px-3 py-2 text-xs font-semibold rounded-lg border focus-visible:outline-none focus-visible:ring-2 transition ${
               titleFlag
-                ? "border-amber-400 bg-amber-50/40 focus:ring-amber-400"
-                : "border-slate-300 focus:ring-blue-200"
+                ? "border-amber-400 bg-amber-50/40 focus-visible:ring-amber-400"
+                : "border-slate-300 focus-visible:ring-blue-500 bg-white"
             }`}
-            placeholder="e.g. Arrival in Srinagar & Dal Lake Sunset"
+            placeholder="e.g. Arrival in Srinagar & Sunset Shikara Ride on Dal Lake"
           />
           {titleFlag && (
             <div className="mt-1 text-xs text-amber-700 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" /> {titleFlag.issue}
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{titleFlag.issue}</span>
             </div>
           )}
         </div>
 
-        {/* Day Description */}
+        {/* Day Narrative Description */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-            Day Description & Schedule
+          <label
+            htmlFor={`day-${currentIndex}-desc`}
+            className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1"
+          >
+            Day Narrative & Schedule
           </label>
           <textarea
+            id={`day-${currentIndex}-desc`}
             rows={3}
             value={currentDay.description}
-            onChange={(e) => handleUpdateDay(currentIndex, { description: e.target.value })}
-            className={`w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 leading-relaxed ${
+            onChange={(e) =>
+              handleUpdateDay(currentIndex, { description: e.target.value })
+            }
+            className={`w-full px-3 py-2 text-xs rounded-lg border focus-visible:outline-none focus-visible:ring-2 leading-relaxed transition ${
               descFlag
-                ? "border-amber-400 bg-amber-50/40 focus:ring-amber-400"
-                : "border-slate-300 focus:ring-blue-200"
+                ? "border-amber-400 bg-amber-50/40 focus-visible:ring-amber-400"
+                : "border-slate-300 focus-visible:ring-blue-500 bg-white"
             }`}
-            placeholder="Detailed narrative for the day..."
+            placeholder="Describe the day's journey, sightseeing highlights, transfers, and leisure time in detail..."
           />
           {descFlag && (
             <div className="mt-1 text-xs text-amber-700 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" /> {descFlag.issue}
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{descFlag.issue}</span>
             </div>
           )}
         </div>
 
-        {/* Stay & Hotel */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* FIX 4.3: INLINE STAY & MEALS (Combined 3-column stay strip + toggleable meal badges) */}
+        <div className="pt-2 border-t border-slate-100 space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Stay / Hotel</label>
-            <input
-              type="text"
-              value={currentDay.stay?.hotel || ""}
-              onChange={(e) =>
-                handleUpdateDay(currentIndex, {
-                  stay: {
-                    hotel: e.target.value || null,
-                    city: currentDay.stay?.city || null,
-                    roomType: currentDay.stay?.roomType || null,
-                  },
-                })
-              }
-              placeholder="e.g. Hotel Pine Spring"
-              className={`w-full px-3 py-1.5 text-xs rounded-lg border ${
-                hotelFlag ? "border-amber-400 bg-amber-50/40" : "border-slate-300"
-              }`}
-            />
-            {hotelFlag && (
-              <span className="text-[10px] text-amber-700">{hotelFlag.issue}</span>
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1 mb-2">
+              <Bed className="w-3.5 h-3.5 text-blue-600" />
+              <span>Stay & Accommodation</span>
+            </span>
+
+            {/* 3-Column Inline Stay Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Hotel / Property Name */}
+              <div>
+                <label
+                  htmlFor={`day-${currentIndex}-stay-hotel`}
+                  className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5"
+                >
+                  Hotel / Property Name
+                </label>
+                <div className="relative">
+                  <input
+                    id={`day-${currentIndex}-stay-hotel`}
+                    type="text"
+                    value={currentDay.stay?.hotel || ""}
+                    onChange={(e) =>
+                      handleUpdateDay(currentIndex, {
+                        stay: {
+                          hotel: e.target.value || null,
+                          city: currentDay.stay?.city || null,
+                          roomType: currentDay.stay?.roomType || null,
+                        },
+                      })
+                    }
+                    placeholder="e.g. Hotel Pine Spring"
+                    className={`w-full pl-7 pr-2.5 py-1.5 text-xs font-semibold rounded-lg border focus-visible:outline-none focus-visible:ring-2 transition ${
+                      hotelFlag
+                        ? "border-amber-400 bg-amber-50/40 focus-visible:ring-amber-400"
+                        : "border-slate-300 focus-visible:ring-blue-500 bg-white"
+                    }`}
+                  />
+                  <Building className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2 pointer-events-none" />
+                </div>
+                {hotelFlag && (
+                  <span className="text-[10px] text-amber-700 block mt-0.5">
+                    {hotelFlag.issue}
+                  </span>
+                )}
+              </div>
+
+              {/* City / Region */}
+              <div>
+                <label
+                  htmlFor={`day-${currentIndex}-stay-city`}
+                  className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5"
+                >
+                  City / Location
+                </label>
+                <div className="relative">
+                  <input
+                    id={`day-${currentIndex}-stay-city`}
+                    type="text"
+                    value={currentDay.stay?.city || ""}
+                    onChange={(e) =>
+                      handleUpdateDay(currentIndex, {
+                        stay: {
+                          hotel: currentDay.stay?.hotel || null,
+                          city: e.target.value || null,
+                          roomType: currentDay.stay?.roomType || null,
+                        },
+                      })
+                    }
+                    placeholder="e.g. Srinagar"
+                    className="w-full pl-7 pr-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-white transition"
+                  />
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Room Category */}
+              <div>
+                <label
+                  htmlFor={`day-${currentIndex}-stay-room`}
+                  className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5"
+                >
+                  Room Category / Type
+                </label>
+                <input
+                  id={`day-${currentIndex}-stay-room`}
+                  type="text"
+                  value={currentDay.stay?.roomType || ""}
+                  onChange={(e) =>
+                    handleUpdateDay(currentIndex, {
+                      stay: {
+                        hotel: currentDay.stay?.hotel || null,
+                        city: currentDay.stay?.city || null,
+                        roomType: e.target.value || null,
+                      },
+                    })
+                  }
+                  placeholder="e.g. Deluxe Lake View"
+                  className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-white transition"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Meals Included: Toggleable Badge Pills */}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Meals Included
+            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[
+                { name: "Breakfast", icon: Coffee },
+                { name: "Lunch", icon: Utensils },
+                { name: "Dinner", icon: Moon },
+              ].map(({ name, icon: Icon }) => {
+                const isChecked = currentDay.meals?.includes(name);
+
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => handleToggleMeal(currentIndex, name)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-1.5 select-none ${
+                      isChecked
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs"
+                        : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isChecked ? "text-emerald-600" : "text-slate-400"}`} />
+                    <span>{name}</span>
+                    {isChecked ? (
+                      <Check className="w-3 h-3 text-emerald-600 ml-0.5" />
+                    ) : (
+                      <span className="text-[10px] text-slate-400 ml-0.5">+</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* FIX 4.4: TAG-BASED ACTIVITIES & QUICK SUGGESTIONS */}
+        <div className="pt-2 border-t border-slate-100 space-y-2.5">
+          <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+            Activities & Sightseeing Highlights
+          </label>
+
+          {/* Existing Activity Tags */}
+          <div className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
+            {currentDay.activities && currentDay.activities.length > 0 ? (
+              currentDay.activities.map((act, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 border border-slate-200/80 px-2.5 py-1 rounded-lg text-xs font-semibold transition"
+                >
+                  <span>{act}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveActivity(currentIndex, i)}
+                    aria-label={`Remove activity ${act}`}
+                    className="w-4 h-4 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-slate-400 italic">
+                No activities added for this day yet.
+              </span>
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">City / Region</label>
-            <input
-              type="text"
-              value={currentDay.stay?.city || ""}
-              onChange={(e) =>
-                handleUpdateDay(currentIndex, {
-                  stay: {
-                    hotel: currentDay.stay?.hotel || null,
-                    city: e.target.value || null,
-                    roomType: currentDay.stay?.roomType || null,
-                  },
-                })
-              }
-              placeholder="e.g. Srinagar"
-              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300"
-            />
-          </div>
-        </div>
-
-        {/* Meals Included */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 uppercase mb-1.5">
-            Meals Included
-          </label>
-          <div className="flex gap-4">
-            {["Breakfast", "Lunch", "Dinner"].map((meal) => {
-              const isChecked = currentDay.meals?.includes(meal);
-              return (
-                <label key={meal} className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => handleToggleMeal(currentIndex, meal)}
-                    className="rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>{meal}</span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Activities Tags */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 uppercase mb-1.5">
-            Activities / Highlights
-          </label>
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {currentDay.activities?.map((act, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 bg-white text-slate-700 border border-slate-300 px-2.5 py-0.5 rounded text-xs"
-              >
-                <span>{act}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveActivity(currentIndex, i)}
-                  className="text-slate-400 hover:text-red-500"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
+          {/* Inline Add Activity Input */}
           <div className="flex gap-2">
             <input
+              id={`day-${currentIndex}-new-act`}
               type="text"
               value={newActivity[currentIndex] || ""}
               onChange={(e) =>
-                setNewActivity({ ...newActivity, [currentIndex]: e.target.value })
+                setNewActivity({
+                  ...newActivity,
+                  [currentIndex]: e.target.value,
+                })
               }
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -368,67 +625,70 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
                   handleAddActivity(currentIndex);
                 }
               }}
-              placeholder="Add activity (e.g. Shikara Ride) and press Enter"
-              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-slate-300"
+              placeholder="Type activity (e.g. Shikara Ride on Dal Lake) and press Enter"
+              className="flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-white"
             />
             <button
               type="button"
               onClick={() => handleAddActivity(currentIndex)}
-              className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs"
+              className="px-3.5 py-1.5 bg-[#091c3e] hover:bg-[#132c5b] text-white rounded-lg text-xs font-bold transition shadow-2xs"
             >
               Add
             </button>
           </div>
+
+          {/* Quick Preset Activity Chips */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-0.5 mr-1">
+              <Sparkles className="w-3 h-3 text-amber-500" /> Quick Add:
+            </span>
+            {COMMON_ACTIVITY_PRESETS.slice(0, 5).map((preset) => {
+              const alreadyAdded = currentDay.activities?.includes(preset);
+              if (alreadyAdded) return null;
+
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handleAddActivity(currentIndex, preset)}
+                  className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200/60 transition"
+                >
+                  + {preset}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Image Query & Photo Attachment */}
-        <div className="pt-3 border-t border-slate-200">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-slate-700 uppercase flex items-center gap-1">
-              <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
-              Day Photo (Unsplash / Pexels)
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsPickerOpen(true)}
-              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1"
-            >
-              <ImageIcon className="w-3 h-3" />
-              {currentDay.image ? "Change Photo" : "Search & Select Photo"}
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={currentDay.imageQuery}
-              onChange={(e) => handleUpdateDay(currentIndex, { imageQuery: e.target.value })}
-              placeholder="e.g. Dal Lake Srinagar shikara"
-              className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-slate-300"
-            />
-            <button
-              type="button"
-              onClick={() => setIsPickerOpen(true)}
-              className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700"
-            >
-              Find Photos
-            </button>
-          </div>
+        {/* FIX 4.2: CONSOLIDATED PHOTO PICKER (1 clean action, no search query input) */}
+        <div className="pt-3 border-t border-slate-100">
+          <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+            <span>Day Photo Banner (Unsplash / Pexels)</span>
+          </label>
 
           {currentDay.image ? (
-            <div className="mt-2.5 flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2.5 overflow-hidden">
+            /* Selected Photo Preview Card: 1 Change Button + 1 Remove Button */
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 border border-slate-200 shadow-2xs">
+              <div className="flex items-center gap-3 overflow-hidden">
                 <img
                   src={currentDay.image.imageUrl}
-                  alt="thumbnail"
-                  className="w-12 h-12 object-cover rounded-lg shrink-0"
+                  alt={
+                    currentDay.image.photographerName
+                      ? `Photo by ${currentDay.image.photographerName}`
+                      : "Day photo preview"
+                  }
+                  className="w-12 h-12 object-cover rounded-lg shrink-0 border border-slate-200 shadow-2xs"
                 />
                 <div className="text-xs truncate">
-                  <div className="font-semibold text-slate-800 truncate">
-                    Photo by {currentDay.image.photographerName}
+                  <div className="font-bold text-slate-800 truncate">
+                    Photo by {currentDay.image.photographerName || "Verified Photographer"}
                   </div>
-                  <div className="text-slate-400 text-[10px]">
-                    Sourced from <span className="uppercase font-bold text-slate-600">{currentDay.image.provider}</span>
+                  <div className="text-slate-400 text-[10px] flex items-center gap-1.5 mt-0.5">
+                    <span className="uppercase font-bold text-slate-600 bg-slate-200/70 px-1 py-0.2 rounded text-[9px]">
+                      {currentDay.image.provider}
+                    </span>
+                    <span>• High Resolution Banner</span>
                   </div>
                 </div>
               </div>
@@ -436,27 +696,45 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
                 <button
                   type="button"
                   onClick={() => setIsPickerOpen(true)}
-                  className="text-xs text-blue-600 hover:underline font-medium"
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition shadow-2xs"
                 >
-                  Change
+                  Change Photo
                 </button>
                 <button
                   type="button"
                   onClick={() => handleUpdateDay(currentIndex, { image: null })}
-                  className="text-xs text-red-600 hover:text-red-800 font-medium"
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                  title="Remove photo"
+                  aria-label="Remove photo"
                 >
-                  Remove
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           ) : (
-            <div
-              onClick={() => setIsPickerOpen(true)}
-              className="mt-2 border border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:bg-blue-50/50 hover:border-blue-400 transition"
-            >
-              <span className="text-xs text-slate-500">
-                No photo selected for Day {currentDay.dayNumber}. Click to browse high-res photos.
-              </span>
+            /* Empty State: 1 Single Primary Action: [ Choose Photo ] */
+            <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                  <ImageIcon className="w-4 h-4 text-slate-400" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-700">
+                    No Photo Selected for Day {currentDay.dayNumber}
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Curate a high-resolution banner photo for the proposal page.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPickerOpen(true)}
+                className="px-3.5 py-1.5 bg-[#091c3e] hover:bg-[#132c5b] text-white rounded-lg text-xs font-bold shadow-2xs transition flex items-center gap-1.5 shrink-0"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                <span>Choose Photo</span>
+              </button>
             </div>
           )}
         </div>
@@ -467,7 +745,9 @@ export default function DaysPanel({ days, onChange, reviewFlags = [] }: DaysPane
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}
         dayNumber={currentDay.dayNumber}
+        mode="day"
         initialQuery={currentDay.imageQuery || currentDay.title}
+        destinationFallback={currentDay.stay?.city || ""}
         currentImage={currentDay.image}
         onSelectImage={(img) => handleUpdateDay(currentIndex, { image: img })}
       />

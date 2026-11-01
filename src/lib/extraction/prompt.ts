@@ -32,6 +32,7 @@ CRITICAL EXTRACTION RULES:
      * "per_person" if general per person
      * "total_group" if total couple / fixed package net
      * "per_room" if per room per night
+   - If individual costs or specifications are given for Flight, Hotel, Land Part, or Visa, extract them into 'pricing.breakup' with { flight, hotel, landPart, visa } items ({ amountPaise, included, note }).
    - If multiple price tiers or hotel options (e.g., 3-star vs 4-star, Option A vs Option B) are present, put the primary in pricing and alternate tiers in variants array.
 
 6. STRUCTURED TERMS & CANCELLATION:
@@ -60,7 +61,7 @@ Return a single valid JSON object strictly matching this structure:
     "nights": 5,
     "days": 6,
     "startDate": "YYYY-MM-DD or null",
-    "travellers": { "adults": 2, "children": 0, "rooms": 1 }
+    "travellers": { "adults": 2, "children": 0, "infants": 0, "rooms": 1 }
   },
   "flights": [
     {
@@ -102,7 +103,13 @@ Return a single valid JSON object strictly matching this structure:
     "gstMode": "inclusive",
     "gstRate": 0.05,
     "sacCode": "998552",
-    "validityDays": 7
+    "validityDays": 7,
+    "breakup": {
+      "flight": { "amountPaise": 2000000, "included": true, "note": "Return economy airfare" },
+      "hotel": { "amountPaise": 2000000, "included": true, "note": "4-star resorts with breakfast" },
+      "landPart": { "amountPaise": 1500000, "included": true, "note": "Private cab & sightseeing" },
+      "visa": { "amountPaise": 0, "included": true, "note": "Tourist visa on arrival / assistance" }
+    }
   },
   "terms": {
     "payment": ["String"],

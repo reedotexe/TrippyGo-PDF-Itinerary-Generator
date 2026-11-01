@@ -1,9 +1,122 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import { PDFParse } from "pdf-parse";
+import path from "path";
+import { pathToFileURL } from "url";
+import zlib from "zlib";
 import { Itinerary, ItinerarySchema } from "../schema/itinerary";
 import { EXTRACTION_SYSTEM_PROMPT, buildExtractionUserPrompt } from "./prompt";
 import { validateAndEnrichExtraction } from "./validate-extraction";
+import { calculateTokenCost, logTokenWatcher } from "./token-watcher";
+import { searchImages } from "../images/client";
+
+// Configure PDFParse worker location for server-side Next.js/Turbopack
+let isPdfWorkerConfigured = false;
+function ensurePdfWorkerConfigured() {
+  if (isPdfWorkerConfigured) return;
+  try {
+    const workerPath = pathToFileURL(
+      path.join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build", "pdf.worker.mjs")
+    ).href;
+    PDFParse.setWorker(workerPath);
+    isPdfWorkerConfigured = true;
+  } catch (err) {
+    console.warn("[Extraction] Could not pre-configure PDFParse worker path:", (err as Error).message);
+  }
+}
+
+/**
+ * Fallback raw stream text extractor for complex/corrupted PDFs where PDFParse might fail
+ */
+function extractRawPdfTextFallback(pdfBuffer: Buffer): string {
+  try {
+    const rawString = pdfBuffer.toString("binary");
+    const chunks: string[] = [];
+
+    const textMatches = rawString.match(/\((?:[^()\\]|\\.)*\)\s*Tj/g);
+    if (textMatches) {
+      for (const m of textMatches) {
+        const text = m.replace(/\)\s*Tj$/, "").slice(1).replace(/\\([()\\])/g, "$1");
+        if (text.trim().length > 1) chunks.push(text.trim());
+      }
+    }
+
+    const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+    let match: RegExpExecArray | null;
+    while ((match = streamRegex.exec(rawString)) !== null) {
+      try {
+        const streamData = Buffer.from(match[1], "binary");
+        const decompressed = zlib.inflateSync(streamData).toString("latin1");
+        const innerMatches = decompressed.match(/\((?:[^()\\]|\\.)*\)\s*Tj/g);
+        if (innerMatches) {
+          for (const im of innerMatches) {
+            const text = im.replace(/\)\s*Tj$/, "").slice(1).replace(/\\([()\\])/g, "$1");
+            if (text.trim().length > 1) chunks.push(text.trim());
+          }
+        }
+      } catch {
+        // Stream not flate-compressed
+      }
+    }
+    return chunks.join(" ").trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Extracts plain text from a PDF Buffer with primary PDFParse and stream fallback
+ */
+export async function extractTextFromPdfBuffer(pdfBuffer: Buffer): Promise<string> {
+  ensurePdfWorkerConfigured();
+  try {
+    const parser = new PDFParse({ data: pdfBuffer });
+    const textResult = await parser.getText();
+    await parser.destroy();
+    const text = textResult?.text?.trim() || "";
+    if (text.length > 50) return text;
+  } catch (err) {
+    console.warn("[Extraction] PDFParse failed, trying raw stream fallback:", (err as Error).message);
+  }
+
+  return extractRawPdfTextFallback(pdfBuffer);
+}
+
+/**
+ * Automatically fetches a relevant cover landscape photo from Unsplash/Pexels for the primary destination
+ * and assigns it to day 1 so CoverPage and PDF render a real image out-of-the-box.
+ */
+async function autoHydrateCoverImage(itinerary: Itinerary): Promise<void> {
+  if (!itinerary.days || itinerary.days.length === 0) return;
+  if (itinerary.days[0].image?.imageUrl) return;
+
+  const rawDest = itinerary.package.destinations?.[0] || "";
+  const cleanDest = rawDest.replace(/\b(destination|tour|package|trip|days?|nights?|\d+n|\d+d)\b/gi, "").trim();
+  const query =
+    cleanDest ||
+    itinerary.days[0].imageQuery ||
+    itinerary.package.title?.replace(/\b(\d+n\b|\d+d\b|nights?|days?|tour|package|itinerary)\b/gi, "").trim() ||
+    "travel landscape";
+
+  try {
+    const results = await searchImages(query, 1);
+    if (results && results.length > 0) {
+      const img = results[0];
+      itinerary.days[0].image = {
+        provider: img.provider,
+        photoId: img.photoId,
+        imageUrl: img.fullUrl,
+        thumbnailUrl: img.thumbUrl,
+        photographerName: img.photographerName,
+        photographerUrl: img.photographerUrl,
+        downloadLocation: img.downloadLocation,
+      };
+      console.log(`[Images] Auto-hydrated cover photo for destination "${query}" (${img.provider}):`, img.fullUrl);
+    }
+  } catch (err) {
+    console.warn("[Images] Cover image auto-hydration skipped (non-blocking):", (err as Error).message);
+  }
+}
 
 export interface ExtractionRequest {
   text?: string;
@@ -47,41 +160,45 @@ export function normalizeRawExtractedJson(raw: any): any {
   // 2. Package normalization
   const pkg = doc.package || {};
   const rawDays = Array.isArray(doc.days) ? doc.days : [];
-  const daysCount = typeof pkg.days === "number" && pkg.days > 0 ? pkg.days : rawDays.length || 1;
+  const daysCount = typeof pkg.days === "number" && pkg.days > 0 ? pkg.days : Math.max(1, rawDays.length);
   const nightsCount = typeof pkg.nights === "number" && pkg.nights >= 0 ? pkg.nights : Math.max(0, daysCount - 1);
 
   doc.package = {
-    title: pkg.title || doc.title || "Custom Itinerary",
+    title: String(pkg.title || doc.title || "Custom Itinerary").trim() || "Custom Itinerary",
     destinations: Array.isArray(pkg.destinations) && pkg.destinations.length > 0
-      ? pkg.destinations
-      : typeof pkg.destinations === "string"
-      ? [pkg.destinations]
-      : ["Destination"],
+      ? pkg.destinations.map((d: any) => String(d).trim()).filter(Boolean)
+      : typeof pkg.destinations === "string" && pkg.destinations.trim()
+        ? [pkg.destinations.trim()]
+        : ["Destination"],
     nights: nightsCount,
     days: daysCount,
     startDate: typeof pkg.startDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pkg.startDate) ? pkg.startDate : null,
     travellers: {
-      adults: Number(pkg.travellers?.adults) || 2,
-      children: Number(pkg.travellers?.children) || 0,
-      rooms: Number(pkg.travellers?.rooms) || 1,
+      adults: Math.max(1, Number(pkg.travellers?.adults) || 2),
+      children: Math.max(0, Number(pkg.travellers?.children) || 0),
+      infants: Math.max(0, Number(pkg.travellers?.infants) || 0),
+      rooms: Math.max(1, Number(pkg.travellers?.rooms) || 1),
     },
   };
 
   // 3. Days normalization
   doc.days = rawDays.map((d: any, idx: number) => {
-    const dayNum = typeof d.dayNumber === "number" ? d.dayNumber : typeof d.day === "number" ? d.day : idx + 1;
+    const dayNum = typeof d.dayNumber === "number" && d.dayNumber >= 1 ? d.dayNumber : idx + 1;
+    const dayTitle = String(d.title || d.dayTitle || `Day ${dayNum}`)
+      .replace(/^Day\s*\d+\s*[-:]*\s*/i, "")
+      .trim();
     return {
       dayNumber: dayNum,
-      title: (d.title || d.dayTitle || `Day ${dayNum}`).replace(/^Day\s*\d+\s*[-:]*\s*/i, ""),
-      description: d.description || d.desc || "",
-      activities: Array.isArray(d.activities) ? d.activities : [],
-      meals: Array.isArray(d.meals) ? d.meals : [],
+      title: dayTitle || `Day ${dayNum}`,
+      description: String(d.description || d.desc || "").trim(),
+      activities: Array.isArray(d.activities) ? d.activities.map((a: any) => String(a).trim()).filter(Boolean) : [],
+      meals: Array.isArray(d.meals) ? d.meals.map((m: any) => String(m).trim()).filter(Boolean) : [],
       stay: d.stay && typeof d.stay === "object" ? {
-        hotel: d.stay.hotel || null,
-        city: d.stay.city || null,
-        roomType: d.stay.roomType || null,
+        hotel: d.stay.hotel ? String(d.stay.hotel).trim() : null,
+        city: d.stay.city ? String(d.stay.city).trim() : null,
+        roomType: d.stay.roomType ? String(d.stay.roomType).trim() : null,
       } : null,
-      imageQuery: d.imageQuery || d.title || "",
+      imageQuery: String(d.imageQuery || d.title || "").trim(),
       image: null,
     };
   });
@@ -104,68 +221,166 @@ export function normalizeRawExtractedJson(raw: any): any {
   // 4. Flights normalization
   if (Array.isArray(doc.flights)) {
     doc.flights = doc.flights.map((f: any) => ({
-      airline: f.airline || "Airline",
-      flightNumber: f.flightNumber || f.flight_number || "",
-      date: f.date || "",
-      departureTime: f.departureTime || f.departure_time || "00:00",
-      departureCode: f.departureCode || f.departure_code || "DEL",
-      departureCity: f.departureCity || f.departure_city || "New Delhi",
-      departureAirport: f.departureAirport || f.departure_airport || "",
-      arrivalTime: f.arrivalTime || f.arrival_time || "00:00",
-      arrivalCode: f.arrivalCode || f.arrival_code || "DEST",
-      arrivalCity: f.arrivalCity || f.arrival_city || "Destination",
-      arrivalAirport: f.arrivalAirport || f.arrival_airport || "",
-      stops: f.stops || "Non-stop",
-      layover: f.layover || "",
-      checkInBaggage: f.checkInBaggage || f.check_in_baggage || "15 kg",
-      cabinBaggage: f.cabinBaggage || f.cabin_baggage || "7 kg",
+      airline: String(f.airline || "Airline").trim(),
+      flightNumber: String(f.flightNumber || f.flight_number || "").trim(),
+      date: String(f.date || "").trim(),
+      departureTime: String(f.departureTime || f.departure_time || "00:00").trim(),
+      departureCode: String(f.departureCode || f.departure_code || "DEL").trim().toUpperCase(),
+      departureCity: String(f.departureCity || f.departure_city || "New Delhi").trim(),
+      departureAirport: String(f.departureAirport || f.departure_airport || "").trim(),
+      arrivalTime: String(f.arrivalTime || f.arrival_time || "00:00").trim(),
+      arrivalCode: String(f.arrivalCode || f.arrival_code || "DEST").trim().toUpperCase(),
+      arrivalCity: String(f.arrivalCity || f.arrival_city || "Destination").trim(),
+      arrivalAirport: String(f.arrivalAirport || f.arrival_airport || "").trim(),
+      stops: String(f.stops || "Non-stop").trim(),
+      layover: String(f.layover || "").trim(),
+      checkInBaggage: String(f.checkInBaggage || f.check_in_baggage || "15 kg").trim(),
+      cabinBaggage: String(f.cabinBaggage || f.cabin_baggage || "7 kg").trim(),
     }));
   } else {
     doc.flights = [];
   }
 
-  // 5. Pricing normalization (handles paise conversion from strings like "₹76,500" or raw numbers)
+  // 5. Pricing normalization
   const pr = doc.pricing || {};
   let netPaise = 0;
-  if (typeof pr.netAmountPaise === "number" && pr.netAmountPaise > 0) {
-    netPaise = pr.netAmountPaise;
-  } else if (typeof pr.netAmount === "number" && pr.netAmount > 0) {
+  if (typeof pr.netAmountPaise === "number" && pr.netAmountPaise >= 0) {
+    netPaise = Math.round(pr.netAmountPaise);
+  } else if (typeof pr.netAmount === "number" && pr.netAmount >= 0) {
     netPaise = Math.round(pr.netAmount * 100);
   } else {
-    const candidateStr = pr.total_package_value || pr.land_package_cost || pr.cost || pr.rate || pr.price;
+    const candidateStr = pr.total_package_value || pr.land_package_cost || pr.cost || pr.rate || pr.price || pr.totalAmount;
     if (typeof candidateStr === "string") {
       const num = parseInt(candidateStr.replace(/[^\d]/g, ""), 10);
       if (!isNaN(num) && num > 0) netPaise = num * 100;
+    } else if (typeof candidateStr === "number" && candidateStr >= 0) {
+      netPaise = Math.round(candidateStr * 100);
     }
   }
 
+  // Discriminated union on markup: { type: "percent", value } | { type: "flat", valuePaise }
+  let normalizedMarkup: { type: "percent"; value: number } | { type: "flat"; valuePaise: number } = {
+    type: "percent",
+    value: 15,
+  };
+
+  if (typeof pr.markup === "number") {
+    normalizedMarkup = { type: "percent", value: Math.min(100, Math.max(0, pr.markup)) };
+  } else if (typeof pr.markup === "string") {
+    const parsedVal = parseFloat(pr.markup.replace(/[^\d.]/g, ""));
+    normalizedMarkup = { type: "percent", value: !isNaN(parsedVal) ? Math.min(100, Math.max(0, parsedVal)) : 15 };
+  } else if (pr.markup && typeof pr.markup === "object") {
+    const rawType = String(pr.markup.type || "").toLowerCase().trim();
+    if (rawType === "flat" || "valuePaise" in pr.markup) {
+      const rawPaise = Number(pr.markup.valuePaise ?? (Number(pr.markup.value || 0) * 100));
+      normalizedMarkup = {
+        type: "flat",
+        valuePaise: isNaN(rawPaise) ? 0 : Math.max(0, Math.round(rawPaise)),
+      };
+    } else {
+      const rawVal = Number(pr.markup.value ?? pr.markup.percent ?? pr.markup.percentage ?? 15);
+      normalizedMarkup = {
+        type: "percent",
+        value: isNaN(rawVal) ? 15 : Math.min(100, Math.max(0, rawVal)),
+      };
+    }
+  }
+
+  // Basis normalization
+  const validBases = ["per_person", "per_person_twin_sharing", "per_room", "total_group"] as const;
+  let basis: (typeof validBases)[number] = "per_person_twin_sharing";
+  if (typeof pr.basis === "string") {
+    const cleanedBasis = pr.basis.toLowerCase().replace(/[\s-]/g, "_");
+    if (cleanedBasis.includes("room")) basis = "per_room";
+    else if (cleanedBasis.includes("group") || cleanedBasis.includes("total")) basis = "total_group";
+    else if (cleanedBasis.includes("twin") || cleanedBasis.includes("sharing")) basis = "per_person_twin_sharing";
+    else if (cleanedBasis.includes("person")) basis = "per_person";
+  }
+
+  // GST mode normalization
+  let gstMode: "inclusive" | "extra" | "hidden" = "inclusive";
+  if (typeof pr.gstMode === "string") {
+    const cleanedGst = pr.gstMode.toLowerCase().trim();
+    if (cleanedGst.includes("extra") || cleanedGst.includes("exclusive") || cleanedGst.includes("plus")) {
+      gstMode = "extra";
+    } else if (cleanedGst.includes("hidden")) {
+      gstMode = "hidden";
+    } else {
+      gstMode = "inclusive";
+    }
+  }
+
+  // 4-pillar package price breakup normalization (Flight, Hotel, Land Part, Visa)
+  const rawBreakup = pr.breakup || {};
+  const normalizeBreakupItem = (item: any) => ({
+    amountPaise: typeof item?.amountPaise === "number" && item.amountPaise >= 0
+      ? Math.round(item.amountPaise)
+      : typeof item?.amount === "number" && item.amount >= 0
+      ? Math.round(item.amount * 100)
+      : 0,
+    included: typeof item?.included === "boolean" ? item.included : true,
+    note: typeof item?.note === "string" ? item.note.trim() : "",
+  });
+
   doc.pricing = {
-    currency: pr.currency || "INR",
-    basis: pr.basis || "per_person_twin_sharing",
+    currency: String(pr.currency || "INR").trim().toUpperCase() || "INR",
+    basis,
     netAmountPaise: netPaise,
-    markup: pr.markup && typeof pr.markup === "object" ? pr.markup : { type: "percent", value: 15 },
-    gstMode: pr.gstMode || "inclusive",
-    gstRate: typeof pr.gstRate === "number" ? pr.gstRate : 0.05,
-    sacCode: pr.sacCode || "998552",
-    validityDays: typeof pr.validityDays === "number" ? pr.validityDays : 7,
+    markup: normalizedMarkup,
+    gstMode,
+    gstRate: typeof pr.gstRate === "number" && pr.gstRate >= 0 && pr.gstRate <= 1 ? pr.gstRate : 0.05,
+    sacCode: String(pr.sacCode || "998552").trim(),
+    validityDays: typeof pr.validityDays === "number" && pr.validityDays > 0 ? Math.round(pr.validityDays) : 7,
+    pricingType: pr.pricingType === "custom" ? "custom" : pr.pricingType === "total_only" ? "total_only" : "supplier",
+    totalPackagePricePaise: typeof pr.totalPackagePricePaise === "number" && pr.totalPackagePricePaise >= 0 ? Math.round(pr.totalPackagePricePaise) : netPaise,
+    supplierBreakup: {
+      supplierCostPaise: typeof pr.supplierBreakup?.supplierCostPaise === "number" ? pr.supplierBreakup.supplierCostPaise : netPaise,
+      flightIncluded: typeof pr.supplierBreakup?.flightIncluded === "boolean" ? pr.supplierBreakup.flightIncluded : false,
+      flightCostPaise: typeof pr.supplierBreakup?.flightCostPaise === "number" ? pr.supplierBreakup.flightCostPaise : 0,
+      flightNote: String(pr.supplierBreakup?.flightNote || "").trim(),
+      landNote: String(pr.supplierBreakup?.landNote || "Complete land package, accommodations, transfers & sightseeing").trim(),
+    },
+    customBreakup: {
+      flight: normalizeBreakupItem(pr.customBreakup?.flight || rawBreakup.flight),
+      hotel: normalizeBreakupItem(pr.customBreakup?.hotel || rawBreakup.hotel),
+      landPart: normalizeBreakupItem(pr.customBreakup?.landPart || rawBreakup.landPart),
+      visa: normalizeBreakupItem(pr.customBreakup?.visa || rawBreakup.visa),
+    },
+    breakup: {
+      flight: normalizeBreakupItem(rawBreakup.flight),
+      hotel: normalizeBreakupItem(rawBreakup.hotel),
+      landPart: normalizeBreakupItem(rawBreakup.landPart),
+      visa: normalizeBreakupItem(rawBreakup.visa),
+    },
   };
 
   // 6. Inclusions & Exclusions
-  doc.inclusions = Array.isArray(doc.inclusions) ? doc.inclusions : [];
-  doc.exclusions = Array.isArray(doc.exclusions) ? doc.exclusions : [];
+  doc.inclusions = Array.isArray(doc.inclusions)
+    ? doc.inclusions.map((i: any) => String(i).trim()).filter(Boolean)
+    : [];
+  doc.exclusions = Array.isArray(doc.exclusions)
+    ? doc.exclusions.map((e: any) => String(e).trim()).filter(Boolean)
+    : [];
 
   // 7. Terms
   const terms = doc.terms || {};
   doc.terms = {
-    payment: Array.isArray(terms.payment) ? terms.payment : [],
-    cancellation: Array.isArray(terms.cancellation) ? terms.cancellation.map((c: any) => ({
-      window: c.window || "",
-      charge: c.charge || "",
-    })) : [],
+    payment: Array.isArray(terms.payment)
+      ? terms.payment.map((p: any) => String(p).trim()).filter(Boolean)
+      : [],
+    cancellation: Array.isArray(terms.cancellation)
+      ? terms.cancellation
+          .filter((c: any) => c && typeof c === "object")
+          .map((c: any) => ({
+            window: String(c.window || "Prior to departure").trim(),
+            charge: String(c.charge || "Standard policy").trim(),
+          }))
+      : [],
   };
 
   // 8. Meta & Variants
   doc.meta = doc.meta || { sourceFile: null, extractedBy: null, reviewFlags: [] };
+  if (!Array.isArray(doc.meta.reviewFlags)) doc.meta.reviewFlags = [];
   doc.variants = Array.isArray(doc.variants) ? doc.variants : [];
 
   return doc;
@@ -217,7 +432,9 @@ export function createEmptyFallbackItinerary(sourceFile: string = "unnamed_sourc
       nights: 3,
       days: 4,
       startDate: null,
-      travellers: { adults: 2, children: 0, rooms: 1 },
+      travellers: { adults: 2, children: 0, infants: 0, rooms: 1 },
+      guestName: "",
+      coverImage: null,
     },
     days: [
       {
@@ -235,14 +452,36 @@ export function createEmptyFallbackItinerary(sourceFile: string = "unnamed_sourc
     inclusions: [],
     exclusions: ["Airfare", "Personal expenses"],
     pricing: {
+      pricingType: "supplier",
+      priceDistribution: "total",
       currency: "INR",
       basis: "per_person_twin_sharing",
       netAmountPaise: 0,
+      totalPackagePricePaise: 0,
       markup: { type: "percent", value: 15 },
       gstMode: "inclusive",
       gstRate: 0.05,
       sacCode: "998552",
       validityDays: 7,
+      supplierBreakup: {
+        supplierCostPaise: 0,
+        flightIncluded: false,
+        flightCostPaise: 0,
+        flightNote: "",
+        landNote: "Complete land package, accommodations, transfers & sightseeing",
+      },
+      customBreakup: {
+        flight: { amountPaise: 0, included: false, note: "" },
+        hotel: { amountPaise: 0, included: true, note: "" },
+        landPart: { amountPaise: 0, included: true, note: "" },
+        visa: { amountPaise: 0, included: false, note: "" },
+      },
+      breakup: {
+        flight: { amountPaise: 0, included: true, note: "" },
+        hotel: { amountPaise: 0, included: true, note: "" },
+        landPart: { amountPaise: 0, included: true, note: "" },
+        visa: { amountPaise: 0, included: true, note: "" },
+      },
     },
     terms: {
       payment: ["25% advance to confirm booking", "Balance 15 days before travel"],
@@ -263,6 +502,7 @@ export function createEmptyFallbackItinerary(sourceFile: string = "unnamed_sourc
         },
       ],
       extractedSnapshot: null,
+      tokenUsage: null,
     },
     variants: [],
   };
@@ -426,21 +666,45 @@ export function parseSupplierTextHeuristic(text: string, filename?: string): Iti
       nights,
       days: parsedDays.length || days,
       startDate: null,
-      travellers: { adults: 2, children: 0, rooms: 1 },
+      travellers: { adults: 2, children: 0, infants: 0, rooms: 1 },
+      guestName: "",
+      coverImage: null,
     },
     days: parsedDays,
     flights: [],
     inclusions: inclusions.length > 0 ? inclusions : ["Accommodation and transfers as mentioned"],
     exclusions: exclusions.length > 0 ? exclusions : ["Airfare", "Personal expenses"],
     pricing: {
+      pricingType: "supplier",
+      priceDistribution: "total",
       currency,
       basis,
       netAmountPaise,
+      totalPackagePricePaise: 0,
       markup: { type: "percent", value: 15 },
       gstMode: "inclusive",
       gstRate: 0.05,
       sacCode: "998552",
       validityDays: 7,
+      supplierBreakup: {
+        supplierCostPaise: netAmountPaise,
+        flightIncluded: false,
+        flightCostPaise: 0,
+        flightNote: "",
+        landNote: "Complete land package, accommodations, transfers & sightseeing",
+      },
+      customBreakup: {
+        flight: { amountPaise: 0, included: false, note: "" },
+        hotel: { amountPaise: 0, included: true, note: "" },
+        landPart: { amountPaise: 0, included: true, note: "" },
+        visa: { amountPaise: 0, included: false, note: "" },
+      },
+      breakup: {
+        flight: { amountPaise: 0, included: true, note: "" },
+        hotel: { amountPaise: 0, included: true, note: "" },
+        landPart: { amountPaise: 0, included: true, note: "" },
+        visa: { amountPaise: 0, included: true, note: "" },
+      },
     },
     terms: {
       payment: ["25% advance to confirm booking", "Balance before travel"],
@@ -455,6 +719,7 @@ export function parseSupplierTextHeuristic(text: string, filename?: string): Iti
       extractedBy: "trippygo_heuristic_v1",
       reviewFlags: [],
       extractedSnapshot: { textPreview: text.slice(0, 200) },
+      tokenUsage: null,
     },
     variants: [],
   };
@@ -472,7 +737,7 @@ async function callGoogleGenAiExtraction(
   modelName: string,
   request: ExtractionRequest,
   extractedPdfText?: string
-): Promise<string> {
+): Promise<{ text: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
   const ai = new GoogleGenAI({ apiKey });
 
   const effectiveText = cleanPdfTextKerning(
@@ -486,7 +751,10 @@ async function callGoogleGenAiExtraction(
   const contents: any[] = [];
 
   // Pass inline PDF document directly if available for native multimodal understanding
-  if (request.pdfBase64) {
+  // Note: Gemini API inlineData has a 20MB payload limit. If base64 is larger than 20MB,
+  // we rely on the high-fidelity extractedPdfText to avoid HTTP 400 payload errors.
+  const MAX_GEMINI_INLINE_BYTES = 20 * 1024 * 1024;
+  if (request.pdfBase64 && request.pdfBase64.length <= MAX_GEMINI_INLINE_BYTES) {
     contents.push({
       inlineData: {
         data: request.pdfBase64,
@@ -503,7 +771,7 @@ async function callGoogleGenAiExtraction(
     config: {
       systemInstruction: EXTRACTION_SYSTEM_PROMPT,
       responseMimeType: "application/json",
-      temperature: 0.1,
+      temperature: 1,
     },
   });
 
@@ -512,19 +780,111 @@ async function callGoogleGenAiExtraction(
     throw new Error(`Google Gen AI returned an empty response: ${JSON.stringify(response).slice(0, 200)}`);
   }
 
-  return responseText;
+  const promptTokens = Number(response.usageMetadata?.promptTokenCount || 0);
+  const completionTokens = Number(response.usageMetadata?.candidatesTokenCount || 0);
+  const totalTokens = Number(response.usageMetadata?.totalTokenCount || promptTokens + completionTokens);
+
+  return {
+    text: responseText,
+    usage: { promptTokens, completionTokens, totalTokens },
+  };
+}
+
+/**
+ * Invokes OpenAI Chat Completions API directly with structured JSON mode.
+ * Uses native fetch with zero extra dependencies.
+ */
+async function callOpenAiExtraction(
+  apiKey: string,
+  modelName: string,
+  request: ExtractionRequest,
+  extractedPdfText?: string
+): Promise<{ text: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } }> {
+  const effectiveText = cleanPdfTextKerning(
+    extractedPdfText && extractedPdfText.length > 50 ? extractedPdfText : request.text || ""
+  );
+
+  const promptText = effectiveText
+    ? buildExtractionUserPrompt(effectiveText, request.filename)
+    : buildExtractionUserPrompt("Please extract the uploaded supplier PDF document.", request.filename);
+
+  const requestBody: Record<string, any> = {
+    model: modelName,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
+      { role: "user", content: promptText },
+    ],
+  };
+
+  // Only pass temperature if explicitly configured; models like gpt-6-luna/o-series reject custom temperatures
+  if (process.env.OPENAI_TEMPERATURE) {
+    const customTemp = parseFloat(process.env.OPENAI_TEMPERATURE);
+    if (!isNaN(customTemp)) {
+      requestBody.temperature = customTemp;
+    }
+  }
+
+  let res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey.trim()}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  // If 400 error mentions temperature, retry immediately without temperature parameter
+  if (!res.ok && res.status === 400 && requestBody.temperature !== undefined) {
+    delete requestBody.temperature;
+    res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey.trim()}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+  }
+
+  if (!res.ok) {
+    const errorBody = await res.text().catch(() => "");
+    throw new Error(`OpenAI API error (${res.status}): ${errorBody}`);
+  }
+
+  const data = (await res.json()) as any;
+  const responseText = data?.choices?.[0]?.message?.content;
+  if (!responseText) {
+    throw new Error(`OpenAI returned empty message content: ${JSON.stringify(data).slice(0, 200)}`);
+  }
+
+  const promptTokens = Number(data?.usage?.prompt_tokens || 0);
+  const completionTokens = Number(data?.usage?.completion_tokens || 0);
+  const totalTokens = Number(data?.usage?.total_tokens || promptTokens + completionTokens);
+
+  return {
+    text: responseText,
+    usage: { promptTokens, completionTokens, totalTokens },
+  };
 }
 
 /**
  * Main Extraction Pipeline Invocation with Retry and Graceful Fallback
  * Supports:
- *  1. Google Gemini (Primary via direct GEMINI_API_KEY)
- *  2. Direct Anthropic SDK (Fallback if ANTHROPIC_API_KEY is configured)
- *  3. Offline Heuristic Parser (Dev / Testing fallback if no keys configured)
+ *  1. OpenAI Platform (Primary if OPENAI_API_KEY configured - e.g. gpt-4o-mini)
+ *  2. Google Gemini (Via GEMINI_API_KEY)
+ *  3. Direct Anthropic SDK (Fallback if ANTHROPIC_API_KEY is configured)
+ *  4. Offline Heuristic Parser (Dev / Testing fallback if no keys configured)
  */
 export async function extractItinerary(request: ExtractionRequest): Promise<ExtractionResponse> {
+  const openAiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.OPENROUTER_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  const hasLiveOpenAi =
+    Boolean(openAiKey) &&
+    !openAiKey!.includes("placeholder") &&
+    !openAiKey!.includes("arbitrary");
 
   const hasLiveGemini =
     Boolean(geminiKey) &&
@@ -536,11 +896,12 @@ export async function extractItinerary(request: ExtractionRequest): Promise<Extr
     !anthropicKey!.includes("placeholder") &&
     !anthropicKey!.includes("arbitrary");
 
-  // 1. If in local dev or CI without live Gemini or Anthropic keys, use heuristic parser
-  if (!hasLiveGemini && !hasLiveAnthropic) {
+  // If in local dev or CI without any live keys, use heuristic parser
+  if (!hasLiveOpenAi && !hasLiveGemini && !hasLiveAnthropic) {
     const rawText = request.text || "Empty source content";
     const itinerary = parseSupplierTextHeuristic(rawText, request.filename);
     itinerary.meta.sourceFile = request.sourceFileKey || request.filename || null;
+    await autoHydrateCoverImage(itinerary);
     return {
       success: true,
       itinerary,
@@ -552,10 +913,7 @@ export async function extractItinerary(request: ExtractionRequest): Promise<Extr
   if (request.pdfBase64) {
     try {
       const pdfBuffer = Buffer.from(request.pdfBase64, "base64");
-      const parser = new PDFParse({ data: pdfBuffer });
-      const textResult = await parser.getText();
-      extractedPdfText = textResult?.text?.trim() || "";
-      await parser.destroy();
+      extractedPdfText = await extractTextFromPdfBuffer(pdfBuffer);
     } catch (err) {
       console.warn("[Extraction] Local PDF text extraction skipped:", (err as Error).message);
     }
@@ -563,29 +921,102 @@ export async function extractItinerary(request: ExtractionRequest): Promise<Extr
 
   let lastError: Error | null = null;
   const maxAttempts = 2;
+  const extractionStartTime = Date.now();
 
   // -------------------------------------------------------------
-  // PATH A: GOOGLE GEMINI DIRECT API INVOCATION
+  // PATH A: OPENAI DIRECT API INVOCATION (Primary if configured)
+  // -------------------------------------------------------------
+  if (hasLiveOpenAi) {
+    const modelName = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const { text: rawJsonString, usage } = await callOpenAiExtraction(
+          openAiKey!,
+          modelName,
+          request,
+          extractedPdfText
+        );
+
+        const durationMs = Date.now() - extractionStartTime;
+        const rawParsed = cleanAndParseJson(rawJsonString);
+        const normalized = normalizeRawExtractedJson(rawParsed);
+        const validatedItinerary = ItinerarySchema.parse(normalized);
+        validatedItinerary.meta.sourceFile = request.sourceFileKey || request.filename || null;
+        validatedItinerary.meta.extractedBy = `openai:${modelName}`;
+
+        const cost = calculateTokenCost(modelName, usage.promptTokens, usage.completionTokens);
+        validatedItinerary.meta.tokenUsage = {
+          model: modelName,
+          ...usage,
+          ...cost,
+          durationMs,
+        };
+
+        logTokenWatcher({
+          provider: "OpenAI",
+          model: modelName,
+          sourceFile: request.filename || request.sourceFileKey,
+          ...usage,
+          ...cost,
+          durationMs,
+        });
+
+        const enriched = validateAndEnrichExtraction(validatedItinerary);
+        await autoHydrateCoverImage(enriched);
+
+        return {
+          success: true,
+          itinerary: enriched,
+        };
+      } catch (err) {
+        lastError = err as Error;
+        console.warn(`[Extraction OpenAI] Attempt ${attempt} failed:`, lastError.message);
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
+  // PATH B: GOOGLE GEMINI DIRECT API INVOCATION
   // -------------------------------------------------------------
   if (hasLiveGemini) {
     const modelName = process.env.GEMINI_MODEL || process.env.GOOGLE_MODEL || "gemini-2.5-flash";
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const rawJsonString = await callGoogleGenAiExtraction(
+        const { text: rawJsonString, usage } = await callGoogleGenAiExtraction(
           geminiKey!,
           modelName,
           request,
           extractedPdfText
         );
 
+        const durationMs = Date.now() - extractionStartTime;
         const rawParsed = cleanAndParseJson(rawJsonString);
         const normalized = normalizeRawExtractedJson(rawParsed);
         const validatedItinerary = ItinerarySchema.parse(normalized);
         validatedItinerary.meta.sourceFile = request.sourceFileKey || request.filename || null;
         validatedItinerary.meta.extractedBy = `google:${modelName}`;
 
+        const cost = calculateTokenCost(modelName, usage.promptTokens, usage.completionTokens);
+        validatedItinerary.meta.tokenUsage = {
+          model: modelName,
+          ...usage,
+          ...cost,
+          durationMs,
+        };
+
+        logTokenWatcher({
+          provider: "Google Gemini",
+          model: modelName,
+          sourceFile: request.filename || request.sourceFileKey,
+          ...usage,
+          ...cost,
+          durationMs,
+        });
+
         const enriched = validateAndEnrichExtraction(validatedItinerary);
+        await autoHydrateCoverImage(enriched);
 
         return {
           success: true,
@@ -599,7 +1030,7 @@ export async function extractItinerary(request: ExtractionRequest): Promise<Extr
   }
 
   // -------------------------------------------------------------
-  // PATH B: DIRECT ANTHROPIC CLAUDE SDK INVOCATION (Fallback)
+  // PATH C: DIRECT ANTHROPIC CLAUDE SDK INVOCATION (Fallback)
   // -------------------------------------------------------------
   if (hasLiveAnthropic) {
     const anthropic = new Anthropic({ apiKey: anthropicKey });
@@ -609,7 +1040,8 @@ export async function extractItinerary(request: ExtractionRequest): Promise<Extr
       try {
         let contentBlocks: Anthropic.Messages.MessageParam["content"] = [];
 
-        if (request.pdfBase64) {
+        const MAX_ANTHROPIC_DOC_BYTES = 30 * 1024 * 1024;
+        if (request.pdfBase64 && request.pdfBase64.length <= MAX_ANTHROPIC_DOC_BYTES) {
           contentBlocks = [
             {
               type: "document" as any,
@@ -646,13 +1078,39 @@ export async function extractItinerary(request: ExtractionRequest): Promise<Extr
           throw new Error("No text response received from Claude API");
         }
 
+        const durationMs = Date.now() - extractionStartTime;
+        const promptTokens = Number(response.usage?.input_tokens || 0);
+        const completionTokens = Number(response.usage?.output_tokens || 0);
+        const totalTokens = promptTokens + completionTokens;
+        const cost = calculateTokenCost(modelName, promptTokens, completionTokens);
+
         const rawParsed = cleanAndParseJson(textBlock.text);
         const normalized = normalizeRawExtractedJson(rawParsed);
         const validatedItinerary = ItinerarySchema.parse(normalized);
         validatedItinerary.meta.sourceFile = request.sourceFileKey || request.filename || null;
-        validatedItinerary.meta.extractedBy = modelName;
+        validatedItinerary.meta.extractedBy = `anthropic:${modelName}`;
+        validatedItinerary.meta.tokenUsage = {
+          model: modelName,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          ...cost,
+          durationMs,
+        };
+
+        logTokenWatcher({
+          provider: "Anthropic",
+          model: modelName,
+          sourceFile: request.filename || request.sourceFileKey,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          ...cost,
+          durationMs,
+        });
 
         const enriched = validateAndEnrichExtraction(validatedItinerary);
+        await autoHydrateCoverImage(enriched);
 
         return {
           success: true,

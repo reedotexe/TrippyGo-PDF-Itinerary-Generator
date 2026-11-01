@@ -54,6 +54,11 @@ assert.equal(
   "Same-origin Next.js static assets must be allowed"
 );
 assert.equal(
+  isRequestAllowedInRenderer("http://localhost:3000/brand/trippygo-logo.png", TARGET_PRINT_URL),
+  true,
+  "Same-origin brand logo must be allowed"
+);
+assert.equal(
   isRequestAllowedInRenderer("https://images.unsplash.com/photo-1548013146-72479768bada", TARGET_PRINT_URL),
   true,
   "Public Unsplash images must be allowed"

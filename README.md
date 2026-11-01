@@ -1,473 +1,322 @@
 # TrippyGo — PDF Itinerary Generator
 
-> **Internal tool for TrippyGo travel agency.** Converts raw supplier itineraries (PDF/text) into branded, print-ready client proposals using AI extraction, live image search, and automated PDF rendering.
+> **Enterprise B2B Itinerary Engine for TrippyGo Travel Agency.**  
+> Transforms unstructured supplier quotes (PDFs, WhatsApp chats, DMC emails) into bespoke, print-ready client proposals in under 5 minutes using AI extraction, intelligent flight routing, and automated Chromium PDF rendering.
+
+[![Next.js 16](https://img.shields.io/badge/Next.js-16.4.3-black?logo=next.js)](https://nextjs.org/)
+[![React 19](https://img.shields.io/badge/React-19.3.0-blue?logo=react)](https://react.dev/)
+[![Tailwind v4](https://img.shields.io/badge/Tailwind-v4.0-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
+[![Playwright](https://img.shields.io/badge/Playwright-Chromium-green?logo=playwright)](https://playwright.dev/)
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5.0-3178c6?logo=typescript)](https://www.typescriptlang.org/)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-C5F74F?logo=drizzle)](https://orm.drizzle.team/)
 
 ---
 
 ## Table of Contents
 
-1. [Project Overview](#1-project-overview)
-2. [Architecture](#2-architecture)
-3. [Technology Stack](#3-technology-stack)
-4. [Repository Structure](#4-repository-structure)
-5. [Core Concepts & Design Decisions](#5-core-concepts--design-decisions)
-6. [Environment Variables Reference](#6-environment-variables-reference)
-7. [Running Locally (Development)](#7-running-locally-development)
-8. [Running the Full Test Suite](#8-running-the-full-test-suite)
-9. [Production Deployment](#9-production-deployment)
-10. [CI/CD Pipeline](#10-cicd-pipeline)
-11. [API Route Reference](#11-api-route-reference)
-12. [User Roles & Access Control](#12-user-roles--access-control)
-13. [Pricing & GST Logic](#13-pricing--gst-logic)
-14. [Data Privacy Note](#14-data-privacy-note)
-15. [Troubleshooting](#15-troubleshooting)
-16. [Future Roadmap (Post v1)](#16-future-roadmap-post-v1)
+1. [The Ideation & Philosophy](#1-the-ideation--philosophy)
+2. [Core Feature Highlights](#2-core-feature-highlights)
+3. [System Architecture Overview](#3-system-architecture-overview)
+4. [Technology Stack](#4-technology-stack)
+5. [Environment Variables Reference](#5-environment-variables-reference)
+6. [Development Setup (Local)](#6-development-setup-local)
+   - [Option A: Native Node.js (Zero Infrastructure)](#option-a--native-nodejs-zero-infrastructure-recommended)
+   - [Option B: Full Docker Compose Cluster](#option-b--full-docker-compose-cluster)
+7. [Production Deployment Guide](#7-production-deployment-guide)
+   - [Hardware Requirements](#hardware-requirements)
+   - [Step-by-Step VPS / Server Deployment](#step-by-step-vps--server-deployment)
+   - [Nginx Reverse Proxy & SSL Configuration](#nginx-reverse-proxy--ssl-configuration)
+   - [Production Security Checklist](#production-security-checklist)
+8. [Testing Suite & Quality Verification](#8-testing-suite--quality-verification)
+9. [Repository Structure](#9-repository-structure)
+10. [Further Documentation](#10-further-documentation)
 
 ---
 
-## 1. Project Overview
+## 1. The Ideation & Philosophy
 
-TrippyGo''s sales team receives unbranded supplier PDFs (DMC quotes, WhatsApp itineraries, email text) and manually re-types them into client-facing Word documents. This tool eliminates that work:
+### The Real-World Agency Problem
+In modern travel sales operations, speed and aesthetics win deals. However, travel sales advisors face significant operational friction:
+1. **Unstructured Supplier Quotations:** Suppliers and Destination Management Companies (DMCs) deliver quotes in chaotic formats: unstructured WhatsApp messages, scanned PDF price sheets, or dense email threads.
+2. **Painful Manual Re-Typing:** Sales advisors historically spend 30–60 minutes re-typing day-by-day details, flight times, and hotel inclusions into Microsoft Word templates.
+3. **The "AI Slop" Trap:** Generic AI tools typically output ugly, SaaS-style dashboards dumped onto paper: outline icon bloat, neon pill badges, generic Inter sans-serif text, and floating bordered boxes.
+4. **Commercial Net Rate Leakage Risk:** Manually calculating markups on client-facing proposals introduces catastrophic risks of accidentally leaking DMC supplier net rates, phone numbers, or internal pricing formulas to clients.
 
-| Step | What Happens |
-|------|-------------|
-| **Upload** | Salesperson uploads a supplier PDF or pastes raw text |
-| **AI Extraction** | Claude AI reads it and outputs a structured JSON itinerary |
-| **Review & Edit** | Two-pane editor: form on the left, live PDF preview on the right |
-| **Image Picker** | Search Unsplash + Pexels per day; attribution auto-printed in PDF |
-| **Markup & GST** | Enter net cost, set markup %; selling price computed in real time |
-| **Generate** | Playwright renders a branded A4 PDF — no design tools needed |
-| **Download / Share** | Salesperson downloads PDF or copies a pre-signed S3 link |
-
-**Target time-to-PDF:** under 5 minutes from upload to download.
-
----
-
-## 2. Architecture
+### The TrippyGo Solution
+TrippyGo re-engineers this workflow into an **Executive Itinerary Workbench** capable of outputting a luxury proposal in **under 5 minutes**:
 
 ```
-+---------------------------------------------------------------------+
-|  Browser (Sales / Admin)                                            |
-|  +------------------+  +------------------------------------------+|
-|  |  /itineraries    |  |  /itineraries/[id]/edit                  ||
-|  |  (Dashboard)     |  |  Form Editor + Live Preview iframe       ||
-|  +------------------+  +------------------------------------------+|
-+----------------------------+-----------------------------------------+
-                             | HTTPS
-+----------------------------v-----------------------------------------+
-|  Next.js 16 App (App Router)  — port 3000                          |
-|                                                                     |
-|  API Routes:                                                        |
-|  POST /api/extract          <- Claude AI extraction                |
-|  GET/PATCH /api/itineraries/[id]                                   |
-|  POST /api/itineraries/[id]/generate  -> calls renderer ---+       |
-|  GET  /api/images/search    <- Unsplash + Pexels            |       |
-|  GET  /api/admin/settings   <- agency configuration         |       |
-|  GET  /print/[id]           <- HMAC-protected print route   |       |
-|                                                             |       |
-|  Database: Drizzle ORM -> PostgreSQL (Neon / local Docker)  |       |
-|  Storage : AWS SDK v3  -> S3 / MinIO (local fallback disk)  |       |
-+-------------------------------------------------------------+-------+
-                                                              | HTTP (internal)
-+-------------------------------------------------------------v-------+
-|  Playwright PDF Renderer Microservice  — port 3001                 |
-|  Node.js + Playwright Chromium (mcr.microsoft.com/playwright)      |
-|  Singleton browser | max 3 concurrent renders | shm_size 2 GB      |
-|  GET  /health   POST /render                                       |
-+--------------------------------------------------------------------+
-
-External Services:
-  Anthropic Claude API (claude-3-7-sonnet-20250219)
-  Unsplash API          (image search + download tracking)
-  Pexels API            (image search)
-  AWS S3 / MinIO        (PDF + upload storage)
-  PostgreSQL / Neon     (relational persistence)
+[Raw Supplier Quote] ────> [AI Extraction] ────> [Split-Screen Editor] ────> [A4 PDF Generation]
+  • WhatsApp text            • Gemini / Claude     • Flight routing             • Headless Chromium
+  • DMC Price PDF            • Structured JSON     • Unsplash stock photos      • Print CSS3
+  • Supplier email           • Zero-leak checks    • Indian GST & markup        • S3 storage link
 ```
 
-### Key architectural choices
-
-- **Renderer is isolated.** A Chromium crash never takes down the web app.
-- **Dual render path.** `RENDERER_SERVICE_URL` set -> delegates to containerised microservice. Unset -> embedded in-process Playwright. Zero-friction local dev without Docker.
-- **All money in integer paise.** Selling price is always *computed*, never stored. `computeClientView()` strips net cost before any data reaches the browser or PDF.
-- **Zero-config offline fallbacks.** DB offline -> `.data/itineraries.json`. S3 offline -> `.uploads/` on local disk.
+### Core Design Principles (Impeccable Standard)
+- **Bespoke Editorial Luxury:** Visual identity inspired by *Condé Nast Traveler* and *Kinfolk*. High-contrast editorial serifs (**Cormorant Garamond**) paired with architectural sans (**Plus Jakarta Sans**), printed on warm ivory canvas (`#fafaf7`) with deep structural navy (`#091c3e`) and restrained heritage red (`#c92229`).
+- **Whitespace Over Boxes:** Zero nested cards or lazy containers. Content breathes naturally through delicate hairline dividers (`#e2e8f0`).
+- **Zero Net Rate Leak Guarantee:** `computeClientView()` mathematically strips supplier net costs and internal metadata before any payload leaves the server.
+- **Operate Mode Workbench:** The home interface is an operations cockpit with instant search (`Cmd+K`), proposal tracking, pipeline metrics, and a distraction-free intake modal.
 
 ---
 
-## 3. Technology Stack
+## 2. Core Feature Highlights
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Framework | Next.js (App Router) | 16.4.3 |
-| Language | TypeScript | ^5 |
-| UI | React | 19.3.0 |
-| Styling | Tailwind CSS v4 | ^4 |
-| Schema & Validation | Zod | ^4 |
-| ORM | Drizzle ORM + drizzle-kit | ^0.45.4 |
-| Database | PostgreSQL | 16 |
-| AI Extraction | Google Gen AI SDK (@google/genai) + Anthropic SDK | ^2.31 / ^1.3 |
-| Image Search | Unsplash API + Pexels API | — |
-| PDF Rendering | Playwright Chromium | ^1.64.1 |
-| Storage | AWS SDK v3 (S3 / MinIO) | ^3 |
-| PDF Parsing (tests) | pdf-parse | ^2.4.5 |
-| Containerisation | Docker + Docker Compose | — |
-| CI/CD | GitHub Actions | — |
+- **Multi-LLM Ingestion Pipeline:** Uses Google Gemini (`gemini-2.5-flash`), Anthropic Claude (`claude-3-7-sonnet-20250219`), or OpenAI (`gpt-4o-mini`) with automatic offline heuristic fallback.
+- **Journey-First Flight Engine:** Automatically groups flight sectors into **Outbound** and **Return** journeys, auto-infers flight directions, resolves airport metadata from 60+ global hubs, and handles cross-midnight layovers with exact clock precision.
+- **Editorial Boarding Pass Tickets:** Renders flights as authentic airline tickets with perforated stubs, IATA codes, and luggage allowances.
+- **Commercials & Indian Tax Engine:** Integer-paise precision arithmetic, SAC 998552 tour operator compliance, 5% inclusive/extra GST modes, Section 206C TCS disclaimers, and 8% minimum margin safety alerts.
+- **Curated Stock Photography:** Live in-editor search across Unsplash and Pexels with automatic photographer attributions printed on client proposals.
+- **Dual-Path PDF Engine:** Microservice-isolated Chromium renderer with in-process local development fallback.
 
 ---
 
-## 4. Repository Structure
+## 3. System Architecture Overview
+
+TrippyGo separates the high-frequency interactive Next.js web application from the memory-heavy PDF rendering engine:
 
 ```
-.
-+-- src/
-|   +-- app/                        # Next.js App Router pages & API routes
-|   |   +-- page.tsx                # Dashboard / itinerary list
-|   |   +-- layout.tsx
-|   |   +-- globals.css
-|   |   +-- health/                 # GET /health (Docker healthcheck)
-|   |   +-- print/[id]/             # HMAC-protected print route (PDF template)
-|   |   +-- itineraries/
-|   |   |   +-- [id]/edit/          # Two-pane editor page
-|   |   +-- admin/settings/         # Admin configuration UI
-|   |   +-- api/
-|   |       +-- extract/            # POST - AI supplier itinerary ingestion
-|   |       +-- images/             # GET search, POST download tracking
-|   |       +-- itineraries/        # CRUD + generate + versions + restore
-|   |       +-- admin/settings/     # GET/PATCH agency settings
-|   |       +-- health/             # GET /api/health
-|   |       +-- storage/download/   # Local S3 fallback download
-|   +-- components/
-|   |   +-- editor/                 # BasicsPanel, DaysPanel, PricingPanel,
-|   |                               # ImagePickerModal, TermsPanel, etc.
-|   +-- lib/
-|   |   +-- schema/                 # itinerary.ts (Zod), validate.ts, client-view.ts, migrate.ts
-|   |   +-- extraction/             # prompt.ts, client.ts, validate-extraction.ts
-|   |   +-- pricing.ts              # All money math (integer paise)
-|   |   +-- pdf/render.ts           # Dual render path (service / in-process)
-|   |   +-- storage/s3.ts           # S3 + local disk fallback
-|   |   +-- auth/session.ts         # Session helper (shared with leads tracker)
-|   |   +-- config/settings.ts      # Runtime agency configuration
-|   |   +-- security/ssrf.ts        # SSRF / RFC 1918 egress guard
-|   |   +-- utils/dates.ts          # Asia/Kolkata calendar engine
-|   +-- db/
-|   |   +-- schema.ts               # Drizzle table definitions
-|   |   +-- index.ts                # DB connection (pg / Neon)
-|   |   +-- migrations/             # drizzle-kit generated SQL migrations
-|   +-- templates/itinerary/        # ItineraryTemplate.tsx + print.css
-|   +-- middleware.ts               # Route auth guard
-|
-+-- services/renderer/              # Standalone PDF renderer microservice
-|   +-- server.ts                   # HTTP server (Playwright)
-|   +-- Dockerfile
-|   +-- package.json
-|
-+-- scripts/                        # Dev/test scripts (run with tsx)
-|   +-- test-extraction.ts          # 20-fixture extraction harness
-|   +-- test-pricing-leak.ts        # PDF binary net-rate leak check
-|   +-- test-pdf-fixtures.ts        # 8 visual fixture renders
-|   +-- test-visual-regression.ts
-|
-+-- tests/
-|   +-- e2e/itinerary-flow.test.ts  # Full Playwright E2E pipeline
-|   +-- security/                   # API key exposure, upload, rate-limit, SSRF tests
-|   +-- docker/docker-config.test.ts
-|
-+-- sample-itineraries/             # 20 supplier fixture files (test data)
-+-- docs/DATA_PRIVACY_NOTE.md       # Anthropic data handling documentation
-+-- agency-defaults.json            # Hard-coded fallback for missing .env values
-+-- Dockerfile                      # Web app multi-stage build
-+-- docker-compose.yml              # Full local cluster (web + renderer + db + minio)
-+-- drizzle.config.ts
-+-- .env.example                    # Complete env var reference (copy to .env.local)
-+-- IMPLEMENTATION_PLAN.md          # Full phase-by-phase build log
++-----------------------------------------------------------------------+
+|  BROWSER CLIENT (Sales Operations)                                    |
+|  - Executive Workbench Dashboard (/)                                  |
+|  - Two-Pane Interactive Editor (/itineraries/[id]/edit)               |
+|  - Agency Commercial Settings (/admin/settings)                       |
++-----------------------------------------------------------------------+
+                                   | HTTPS
++----------------------------------v------------------------------------+
+|  NEXT.JS 16 APP ROUTER (Port 3000)                                    |
+|                                                                       |
+|  API Endpoints:                                                       |
+|  • POST /api/extract             <- Gemini / Claude AI Extraction     |
+|  • GET/POST /api/itineraries     <- Proposal Listing & Creation       |
+|  • GET/DELETE /api/itineraries/[id]                                   |
+|  • POST /api/itineraries/[id]/generate -> Calls PDF Renderer          |
+|  • GET  /print/[id]              <- Cryptographic HMAC Print Route    |
+|                                                                       |
+|  Persistence Abstraction:                                             |
+|  • Relational DB: Drizzle ORM -> PostgreSQL 16 (Neon / VPS)           |
+|    (Transparent fallback to .data/itineraries.json when DB offline)   |
+|  • Storage: AWS S3 SDK v3 -> AWS S3 / MinIO                           |
+|    (Transparent fallback to .uploads/ on local disk when S3 offline)  |
++-----------------------------------------------------------------------+
+                                   | HTTP (HMAC-Authenticated)
++----------------------------------v------------------------------------+
+|  STANDALONE PLAYWRIGHT CHROMIUM RENDERER (Port 3001)                  |
+|  • Containerised Chromium (mcr.microsoft.com/playwright)              |
+|  • Memory-isolated: 2 GB shared memory (/dev/shm), max 3 workers      |
+|  • Process Isolation: Chromium crash cannot crash the web service     |
++-----------------------------------------------------------------------+
 ```
+
+> 📖 **Deep Technical Details:** Read [ARCHITECTURE.md](file:///c:/programming-files/WEB-DEV/TrippyGo/TrippyGo-PDF-Itinerary-Generator/ARCHITECTURE.md) for full subsystem breakdowns, data flow diagrams, security threat models, and schema migration mechanics.
 
 ---
 
-## 5. Core Concepts & Design Decisions
+## 4. Technology Stack
 
-### Money: Integer Paise
-
-All monetary values are stored and computed as **integer paise** (1 INR = 100 paise). Rupees are produced only at display time via `formatInr(paise)`.
-
-```
-Rs 1,25,000 -> stored as 12500000 (paise)
-```
-
-This eliminates all floating-point drift. Never store partial rupees.
-
-### Client View Projection
-
-`computeClientView(itinerary)` strips `netAmountPaise`, `markup`, and `meta.sourceFile` before any data leaves the server to the browser or to the PDF renderer. The PDF leak test (`npm run test:leak`) enforces this in CI.
-
-### Schema Version Migration
-
-Every DB/file read runs `migrateItinerarySchema()` automatically. Pre-v1 JSON (raw rupees, scalar markups) is upgraded on the fly — no offline migration scripts needed.
-
-### Print Route & HMAC Tokens
-
-Playwright does not carry session cookies. The `/print/[id]` route is protected by a short-lived HMAC token (`INTERNAL_RENDER_SECRET`). The server generates the token, passes it as a query param, and validates it server-side before rendering.
-
-### IST Calendar Engine
-
-All date computations are anchored to `Asia/Kolkata` (IST, UTC+05:30). This prevents year-rollover and leap-day bugs when the server runs on UTC.
+| Layer | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Framework** | Next.js (App Router) | `16.4.3` | React Server Components, API routes, Turbopack |
+| **Runtime / UI** | React / React DOM | `19.3.0` | Modern hooks, transitions, and concurrent rendering |
+| **Language** | TypeScript | `^5` | Full-stack strict type safety |
+| **Styling** | Tailwind CSS | `^4.0` | Token-driven CSS, print stylesheets, zero runtime CSS |
+| **Database** | PostgreSQL + Drizzle ORM | `pg ^8.23`, `drizzle ^0.45` | Relational persistence with instant schema migrations |
+| **AI Extraction** | Google Gen AI + Anthropic SDK | `@google/genai`, `@anthropic-ai/sdk` | Structured document parsing |
+| **PDF Rendering** | Playwright Chromium | `^1.64.1` | Headless print rendering to exact A4 dimensions |
+| **Object Storage** | AWS S3 SDK v3 | `@aws-sdk/client-s3` | Storing rendered client PDFs and uploaded supplier files |
+| **Typography** | Self-Hosted Web Fonts | Cormorant Garamond, Plus Jakarta Sans, Caveat | Deterministic, offline rendering |
 
 ---
 
-## 6. Environment Variables Reference
+## 5. Environment Variables Reference
 
-Copy `.env.example` to `.env.local` and fill in real values.
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GEMINI_API_KEY` | Primary | Google AI Studio Gemini API key (https://aistudio.google.com/app/apikey) |
-| `GEMINI_MODEL` | No | Direct Google model (default: `gemini-2.5-flash`, `gemini-2.5-pro`) |
-| `ANTHROPIC_API_KEY` | Alternative | Direct Claude API key from console.anthropic.com (fallback) |
-| `ANTHROPIC_MODEL` | No | Direct model ID (default: `claude-3-7-sonnet-20250219`) |
-| `UNSPLASH_ACCESS_KEY` | Yes | Unsplash API access key |
-| `PEXELS_API_KEY` | Yes | Pexels API key |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `S3_BUCKET` | Yes | Bucket name for PDFs + uploads |
-| `S3_REGION` | Yes | AWS region (e.g. `ap-south-1`) |
-| `S3_ACCESS_KEY_ID` | Yes | AWS / MinIO access key |
-| `S3_SECRET_ACCESS_KEY` | Yes | AWS / MinIO secret key |
-| `S3_ENDPOINT` | No | Set for MinIO/R2; leave empty for AWS S3 |
-| `S3_FORCE_PATH_STYLE` | No | `true` for MinIO; omit for AWS |
-| `RENDERER_SERVICE_URL` | No | URL of renderer microservice. If unset -> in-process Playwright |
-| `INTERNAL_RENDER_SECRET` | Yes | 32+ char random string for HMAC render tokens |
-| `NEXT_PUBLIC_APP_URL` | Yes | Public app URL (used in Unsplash UTM links) |
-| `DEFAULT_GST_RATE` | No | e.g. `0.05` for 5% |
-| `DEFAULT_SAC_CODE` | No | `998552` |
-| `AGENCY_GSTIN` | No | Agency GSTIN number |
-| `DEFAULT_MARKUP_PERCENT` | No | e.g. `15` |
-| `MIN_MARGIN_PERCENT` | No | e.g. `8` |
-| `DEFAULT_VALIDITY_DAYS` | No | e.g. `7` |
-
-> **Never** commit real API keys. `.env.local` and `.env` are in `.gitignore`. Use GitHub Secrets for CI and your platform''s secret manager for production.
-
----
-
-## 7. Running Locally (Development)
-
-### Prerequisites
-
-| Tool | Minimum Version | Install |
-|------|----------------|---------|
-| Node.js | 20 LTS | https://nodejs.org |
-| npm | 10+ | bundled with Node |
-| Docker Desktop | Latest | https://www.docker.com/products/docker-desktop/ |
-
-### Option A — Full Local Stack (Recommended)
-
-Starts the Next.js app, Playwright renderer, PostgreSQL, and MinIO all via Docker Compose.
+Copy `.env.example` to `.env.local` for local development or `.env` for production:
 
 ```bash
-# 1. Clone the repo
-git clone <your-repo-url>
-cd "PDF Itinerary Generator"
+cp .env.example .env.local
+```
 
-# 2. Set up environment
+| Variable | Required | Default / Example | Purpose |
+| :--- | :---: | :--- | :--- |
+| `GEMINI_API_KEY` | **Primary** | `AIzaSy...` | Google Gemini API key for structured itinerary parsing |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model name |
+| `ANTHROPIC_API_KEY` | Alternative | `sk-ant-api03-...` | Anthropic Claude API key (secondary fallback) |
+| `ANTHROPIC_MODEL` | No | `claude-3-7-sonnet-20250219` | Claude model name |
+| `OPENAI_API_KEY` | Alternative | `sk-...` | OpenAI API key (tertiary fallback) |
+| `DATABASE_URL` | No* | `postgresql://user:pass@localhost:5432/trippygo` | PostgreSQL connection string (*falls back to local JSON) |
+| `S3_BUCKET` | No* | `trippygo-itineraries` | S3 bucket for PDF storage (*falls back to local disk) |
+| `S3_REGION` | No | `ap-south-1` | AWS region |
+| `S3_ACCESS_KEY_ID` | No | `AKIA...` | AWS or MinIO Access Key |
+| `S3_SECRET_ACCESS_KEY` | No | `...` | AWS or MinIO Secret Key |
+| `S3_ENDPOINT` | No | `http://localhost:9000` | Leave empty for AWS; set for MinIO or Cloudflare R2 |
+| `INTERNAL_RENDER_SECRET` | **Yes** | `(random 32+ char string)` | Cryptographic secret for signing HMAC print tokens |
+| `RENDERER_SERVICE_URL` | No | `http://localhost:3001` | Microservice URL. If omitted, uses embedded Chromium |
+| `NEXT_PUBLIC_APP_URL` | **Yes** | `http://localhost:3000` | Canonical app URL |
+| `UNSPLASH_ACCESS_KEY` | No | `...` | Stock photography search |
+| `PEXELS_API_KEY` | No | `...` | Secondary photo provider |
+
+---
+
+## 6. Development Setup (Local)
+
+### Prerequisites
+- **Node.js:** `v20.x` or `v22.x` (LTS)
+- **Package Manager:** `npm 10+`
+- **Optional:** Docker Desktop (if using full container cluster)
+
+---
+
+### Option A: Native Node.js (Zero Infrastructure) [RECOMMENDED]
+
+TrippyGo supports **zero-infrastructure local development**. If PostgreSQL or S3 are not running, the application automatically persists itineraries to `.data/itineraries.json` and files to `.uploads/`.
+
+```bash
+# 1. Clone repository
+git clone <repo-url>
+cd trippygo-pdf-itinerary-generator
+
+# 2. Install dependencies
+npm install
+
+# 3. Install Playwright Chromium (needed for local PDF rendering)
+npx playwright install --with-deps chromium
+
+# 4. Configure local environment
+cp .env.example .env.local
+# Open .env.local and add at least:
+# - GEMINI_API_KEY (or ANTHROPIC_API_KEY)
+# - INTERNAL_RENDER_SECRET=dev-secret-key-must-be-at-least-32-characters-long
+# - NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# 5. Start development server with Turbopack hot reload
+npm run dev
+```
+
+Visit **`http://localhost:3000`** in your browser. The executive workbench will load with sample itineraries.
+
+---
+
+### Option B: Full Docker Compose Cluster
+
+Runs the complete containerized stack: Next.js Web App, Isolated Playwright Renderer, PostgreSQL 16 database, and MinIO S3 object store.
+
+```bash
+# 1. Configure environment
 cp .env.example .env
-# Edit .env — fill in ANTHROPIC_API_KEY, UNSPLASH_ACCESS_KEY, PEXELS_API_KEY
-# Leave DATABASE_URL and S3_* as-is; they point to the local Docker services
+# Fill in your AI keys (GEMINI_API_KEY or ANTHROPIC_API_KEY) in .env
 
-# 3. Start all services
+# 2. Spin up all containers
 docker compose up --build
 
-# 4. Run database migration (first time, or after schema changes)
+# 3. Apply database migrations (first launch only)
 docker compose exec web npx drizzle-kit migrate
-
-# App is live at:       http://localhost:3000
-# MinIO console at:     http://localhost:9001  (user: minioadmin / pass: minioadmin)
 ```
 
-> **Note:** The first `docker compose up --build` pulls the Playwright Chromium image (~1.5 GB).
-> Subsequent starts use Docker cache and are fast.
-
-### Option B — Native Node.js (No Docker)
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Install Playwright browsers (needed for PDF rendering)
-npx playwright install --with-deps chromium
-
-# 3. Configure environment
-cp .env.example .env.local
-# Edit .env.local — fill in:
-#   DATABASE_URL=postgresql://...
-#   S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY
-#   ANTHROPIC_API_KEY, UNSPLASH_ACCESS_KEY, PEXELS_API_KEY
-#   INTERNAL_RENDER_SECRET=<random 32+ char string>
-#   NEXT_PUBLIC_APP_URL=http://localhost:3000
-# Leave RENDERER_SERVICE_URL unset -> app uses in-process Playwright
-
-# 4. Run database migration
-npx drizzle-kit migrate
-
-# 5. Start the development server (Turbopack hot reload)
-npm run dev
-# App at http://localhost:3000
-```
-
-#### Zero-infrastructure local dev
-
-Both the database and S3 storage fall back gracefully when offline:
-- **DB offline** -> data persisted to `.data/itineraries.json`
-- **S3 offline** -> files stored in `.uploads/` on local disk
-
-You can run `npm run dev` with only `ANTHROPIC_API_KEY` set and test most features.
-
-### Starting the Renderer Microservice (standalone)
-
-If you want the renderer as a separate process during native dev:
-
-```bash
-cd services/renderer
-npm install
-npx playwright install --with-deps chromium
-npx tsx server.ts
-# Renderer ready at http://localhost:3001
-```
-
-Then set `RENDERER_SERVICE_URL=http://localhost:3001` in `.env.local`.
+- **Web App:** `http://localhost:3000`
+- **Renderer Microservice:** `http://localhost:3001`
+- **MinIO S3 Console:** `http://localhost:9001` (User: `minioadmin`, Pass: `minioadmin`)
 
 ---
 
-## 8. Running the Full Test Suite
+## 7. Production Deployment Guide
 
-### Prerequisites
-
-- Playwright Chromium installed: `npx playwright install --with-deps chromium`
-- `INTERNAL_RENDER_SECRET` set in `.env.local` (any string >= 32 chars)
-
-### Run all tests
-
-```bash
-npm test
-```
-
-| Command | What It Tests |
-|---------|--------------|
-| `npm run test:unit` | Pricing formulas (paise math, GST modes, rounding, Indian number format), schema migration (v0->v1, rupee normalisation) |
-| `npm run test:dates` | IST calendar engine: year rollover, leap day, 1-night trip, quote expiry |
-| `npm run test:security` | API key exposure scan, upload validation (size + MIME + spoofed header), rate-limit HTTP 429, SSRF egress blocking |
-| `npm run test:docker` | Docker Compose config audit: healthcheck definitions, resource limits |
-| `npm run test:leak` | Renders PDF with known net rate; parses binary stream; asserts zero leakage |
-| `npm run test:visual` | Renders 8 fixture PDFs; compares pixel diff against reference screenshots |
-| `npm run test:e2e` | Full Playwright E2E: upload -> AI extraction -> markup/GST -> image -> generate -> download -> binary leak check |
-
-### Run individual suites
-
-```bash
-npm run test:unit          # Fast, no browser needed (~3 s)
-npm run test:dates         # Fast (~1 s)
-npm run test:security      # Fast (~5 s)
-npm run test:docker        # Fast (~2 s)
-npm run test:extraction    # 20-fixture extraction harness (~30 s with API)
-npm run test:leak          # Renders one PDF, parses it (~10 s)
-npm run test:visual        # Renders 8 PDFs (~60 s)
-npm run test:e2e           # Full browser + PDF pipeline (~90 s)
-```
-
-### Extraction test harness
-
-```bash
-npm run test:extraction
-```
-
-Runs all 20 sample supplier itineraries through the full extraction pipeline and scores:
-day count accuracy, net price extraction, hotel name detection, cancellation row count, and Zod schema compliance.
-**Baseline: 100% schema validity, 91.0% average quality score.**
-
-> Without `ANTHROPIC_API_KEY`, the offline heuristic parser runs. Full scores require live Claude API access.
+### Hardware Requirements
+- **Server:** Linux VPS (Ubuntu 22.04 LTS or Debian 12 recommended)
+- **Minimum Specifications:** 4 vCPU, 8 GB RAM (Playwright Chromium requires at least 2 GB `/dev/shm` and 4 GB RAM during active render bursts)
+- **Storage:** 50 GB NVMe SSD
 
 ---
 
-## 9. Production Deployment
+### Step-by-Step VPS / Server Deployment
 
-### Option A — Docker Compose on a VPS / VM (Recommended for small teams)
-
-Minimum server spec: **4 vCPU, 8 GB RAM** (renderer needs 4 GB + 2 GB shm).
-
-#### 1. Server setup
-
+#### 1. System Preparation & Docker Installation
 ```bash
-# Ubuntu 22.04 / Debian 12
-sudo apt-get update
-sudo apt-get install -y docker.io docker-compose-plugin
-sudo usermod -aG docker $USER && newgrp docker
+sudo apt-get update && sudo apt-get upgrade -y
+sudo apt-get install -y docker.io docker-compose-plugin nginx certbot python3-certbot-nginx
+sudo usermod -aG docker $USER
 ```
 
-#### 2. Clone and configure
-
+#### 2. Deploy Application Files
 ```bash
-git clone <your-repo-url> /opt/trippygo
+git clone <repo-url> /opt/trippygo
 cd /opt/trippygo
 
+# Create production environment file
 cp .env.example .env
-nano .env   # Fill in all real values
+nano .env
 ```
 
-**Critical values to change for production:**
-
+**Production `.env` configuration:**
 ```env
 NODE_ENV=production
-DATABASE_URL=postgresql://trippygo:<STRONG_PASSWORD>@db:5432/trippygo
-INTERNAL_RENDER_SECRET=<openssl rand -hex 32>
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-ANTHROPIC_API_KEY=sk-ant-api03-...real...
-UNSPLASH_ACCESS_KEY=...real...
-PEXELS_API_KEY=...real...
+NEXT_PUBLIC_APP_URL=https://itineraries.youragency.com
+INTERNAL_RENDER_SECRET=generate_with_openssl_rand_hex_32
 
-# AWS S3 (instead of MinIO):
-S3_BUCKET=trippygo-itineraries-prod
+# Production Database (Neon or Managed Postgres)
+DATABASE_URL=postgresql://trippygo_user:STRONG_PASSWORD@db_host:5432/trippygo?sslmode=require
+
+# Production AWS S3
+S3_BUCKET=trippygo-proposals-production
 S3_REGION=ap-south-1
 S3_ACCESS_KEY_ID=AKIA...
 S3_SECRET_ACCESS_KEY=...
-# Leave S3_ENDPOINT empty for AWS S3
+# Leave S3_ENDPOINT empty for native AWS S3
+
+# AI Extraction Credentials
+GEMINI_API_KEY=AIzaSy...
+ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Service Discovery
+RENDERER_SERVICE_URL=http://renderer:3001
 ```
 
-#### 3. Harden docker-compose.yml for production
-
-- Change `db` service `POSTGRES_PASSWORD` to match your `.env`.
-- Remove external `ports:` mappings for `db` and `minio` (no direct internet exposure).
-
-#### 4. Build and start
-
+#### 3. Build & Launch Containers
 ```bash
-docker compose build
+# Build multi-stage standalone Next.js image and renderer image
+docker compose build --no-cache
+
+# Start in background
 docker compose up -d
 
-# Run DB migration (first deploy only, or after schema changes)
+# Execute database migrations
 docker compose exec web npx drizzle-kit migrate
 
-# Verify all services are healthy
+# Verify containers are healthy
 docker compose ps
 curl http://localhost:3000/health
 curl http://localhost:3001/health
 ```
 
-#### 5. Nginx reverse proxy + TLS
+---
+
+### Nginx Reverse Proxy & SSL Configuration
+
+Create `/etc/nginx/sites-available/trippygo`:
 
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name itineraries.youragency.com;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name your-domain.com;
+    server_name itineraries.youragency.com;
 
-    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/itineraries.youragency.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/itineraries.youragency.com/privkey.pem;
+
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     client_max_body_size 15M;
 
     location / {
-        proxy_pass         http://localhost:3000;
+        proxy_pass         http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;
@@ -476,274 +325,96 @@ server {
         proxy_set_header   Upgrade           $http_upgrade;
         proxy_set_header   Connection        "upgrade";
         proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
     }
 }
 ```
 
-Get TLS certificate: `sudo certbot --nginx -d your-domain.com`
+Enable the configuration and issue SSL:
+```bash
+sudo ln -s /etc/nginx/sites-available/trippygo /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d itineraries.youragency.com
+```
 
-#### 6. Database management
+---
+
+### Production Security Checklist
+
+- [x] **SSRF Egress Defense:** `src/lib/security/ssrf.ts` actively blocks requests to RFC 1918 subnets and cloud metadata endpoints (`169.254.169.254`).
+- [x] **Renderer Process Isolation:** The renderer runs in a sandboxed microservice container; Chromium failures cannot corrupt web processes.
+- [x] **Zero-Leak Client Projection:** The `computeClientView()` function runs automatically prior to rendering and state distribution.
+- [x] **HMAC Render Signing:** The `/print/[id]` template route rejects requests missing valid time-stamped signatures.
+- [x] **Rate Limiting:** Enforces strict per-IP rate limits on AI extraction (`10/hr`), PDF rendering (`20/hr`), and photo search (`100/hr`).
+
+---
+
+## 8. Testing Suite & Quality Verification
+
+TrippyGo maintains a rigorous automated testing suite covering money mathematics, schema migrations, security boundaries, and PDF binary leaks:
 
 ```bash
-# Backup
-docker compose exec db pg_dump -U trippygo trippygo > backup_$(date +%Y%m%d).sql
-
-# Restore
-cat backup_20261024.sql | docker compose exec -T db psql -U trippygo trippygo
-
-# Run migration after code update
-git pull
-docker compose build web
-docker compose exec web npx drizzle-kit migrate
-docker compose up -d web
+# Run all core test suites
+npm test
 ```
 
-### Option B — Railway / Fly.io (Fastest to deploy)
+### Individual Test Commands
 
-**Railway:**
-1. Connect your GitHub repo in the Railway dashboard.
-2. Railway auto-detects `Dockerfile` and builds the web app.
-3. Add a second service pointing to `./services/renderer/Dockerfile`.
-4. Add a Railway PostgreSQL plugin.
-5. Set all env vars in the Railway *Variables* tab.
-6. Set `RENDERER_SERVICE_URL` to the Railway-internal URL of the renderer service.
-
-**Fly.io:**
-```bash
-fly auth login
-fly launch --no-deploy
-fly secrets set ANTHROPIC_API_KEY=... INTERNAL_RENDER_SECRET=...
-fly deploy
-```
-
-> On Fly.io, use `fly postgres create` for the database and `fly volumes create` for persistent storage.
-
-### Option C — AWS ECS / GCP Cloud Run (Scale-out)
-
-Deploy each container as a separate ECS task or Cloud Run service. The renderer's `shm_size: 2gb` requirement maps to `linuxParameters.sharedMemorySize: 2048` in ECS task definitions.
-
-Use **Amazon RDS PostgreSQL** and **AWS S3 (ap-south-1)** for managed persistence.
-
-### Production deployment checklist
-
-- [ ] All API keys set (not placeholders from `.env.example`)
-- [ ] `INTERNAL_RENDER_SECRET` is >= 32 random bytes (`openssl rand -hex 32`)
-- [ ] `NODE_ENV=production`
-- [ ] DB password is strong (not `localdev`)
-- [ ] `ports:` for `db` and `minio` removed (no external exposure)
-- [ ] HTTPS/TLS configured on reverse proxy
-- [ ] `NEXT_PUBLIC_APP_URL` set to the real public domain
-- [ ] `drizzle-kit migrate` run against production DB
-- [ ] `docker compose ps` shows all services as `healthy`
-- [ ] End-to-end smoke test: upload a supplier PDF, generate and download a PDF
-- [ ] Automated daily DB backup configured
-- [ ] Unsplash production API approval submitted (1,000 req/hr)
+| Command | Suite | Purpose |
+| :--- | :--- | :--- |
+| `npm run test:unit` | **Pricing & Schema** | Verifies paise math, margin floor checks, GST modes, and v0 ➔ v1 migration |
+| `npm run test:dates` | **Calendar Engine** | Tests Asia/Kolkata timezone rollover, leap years, and cross-month itineraries |
+| `npm run test:security` | **Security Audit** | Scans client files for secret leaks, tests 10MB upload limits and SSRF defenses |
+| `npm run test:docker` | **DevOps Audit** | Verifies container healthcheck configurations, resource limits, and Next standalone output |
+| `npm run test:leak` | **PDF Binary Leak** | Renders actual PDF and parses binary stream to assert zero supplier net rate leakage |
+| `npm run test:visual` | **Visual Regression** | Validates pixel consistency across 8 benchmark multi-page PDF proposals |
+| `npm run test:e2e` | **End-to-End** | Full browser workflow: upload ➔ AI parse ➔ flight builder ➔ PDF generation |
+| `npx tsx src/lib/flights/journey.test.ts` | **Flight Engine** | Tests layover calculations, cross-midnight arrivals, and journey grouping |
 
 ---
 
-## 10. CI/CD Pipeline
-
-### `.github/workflows/ci.yml` — triggers on every push and PR to `main`
+## 9. Repository Structure
 
 ```
-Lint -> TypeScript strict check -> Unit tests -> Date tests -> Security tests
--> Extraction harness (20 fixtures) -> PDF leak test
--> Visual regression -> E2E Playwright -> Docker build validation (dry run)
-```
-
-All jobs run on `ubuntu-latest`. CI uses `concurrency` groups to cancel in-progress runs on new pushes.
-
-### `.github/workflows/deploy.yml` — triggers on merge to `main`
-
-```
-Run drizzle-kit migrate (production DB)
--> Build web + renderer Docker images
--> Push to GitHub Container Registry (ghcr.io)
--> Trigger production deployment webhook
-```
-
-### Required GitHub Secrets
-
-Set in **Settings -> Secrets and variables -> Actions**:
-
-| Secret | Value |
-|--------|-------|
-| `ANTHROPIC_API_KEY` | Live Claude API key |
-| `UNSPLASH_ACCESS_KEY` | Unsplash API key |
-| `PEXELS_API_KEY` | Pexels API key |
-| `DATABASE_URL` | Production PostgreSQL connection string |
-| `S3_BUCKET` | Production S3 bucket name |
-| `S3_REGION` | AWS region |
-| `S3_ACCESS_KEY_ID` | AWS IAM access key |
-| `S3_SECRET_ACCESS_KEY` | AWS IAM secret key |
-| `INTERNAL_RENDER_SECRET` | 32+ char random string |
-| `NEXT_PUBLIC_APP_URL` | Production URL |
-| `GHCR_TOKEN` | GitHub PAT with `write:packages` scope |
-
----
-
-## 11. API Route Reference
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| `POST` | `/api/extract` | session | Upload supplier PDF/text; run AI extraction; return structured JSON |
-| `GET` | `/api/itineraries` | session | List itineraries (own for sales; all for admin) |
-| `POST` | `/api/itineraries` | session | Create a new itinerary |
-| `GET` | `/api/itineraries/[id]` | session | Fetch itinerary (client view — no net price) |
-| `PATCH` | `/api/itineraries/[id]` | session | Autosave current editor state |
-| `POST` | `/api/itineraries/[id]/generate` | session | Render PDF; create version row; return download link |
-| `GET` | `/api/itineraries/[id]/versions` | session | List versions with pre-signed PDF URLs (1-hr expiry) |
-| `POST` | `/api/itineraries/[id]/versions/[n]/restore` | session | Restore editor to a historical version snapshot |
-| `GET` | `/api/images/search` | session | Parallel Unsplash + Pexels image search (10-min cache) |
-| `POST` | `/api/images/download` | session | Trigger Unsplash download tracking on photo selection |
-| `GET` | `/api/admin/settings` | **admin** | Read agency runtime configuration |
-| `PATCH` | `/api/admin/settings` | **admin** | Update markup, GST, GSTIN, rounding, validity, etc. |
-| `GET` | `/api/storage/download` | session | Local-fallback PDF download (dev/staging only) |
-| `GET` | `/api/health` | public | Returns `{ status: "ok" }` — Docker healthcheck |
-| `GET` | `/print/[id]` | HMAC token | Server-rendered HTML for Playwright PDF renderer |
-| `GET` | `/health` | public | Alias healthcheck route |
-
----
-
-## 12. User Roles & Access Control
-
-| Capability | `sales` | `admin` |
-|-----------|:-------:|:-------:|
-| Upload supplier itinerary | Yes | Yes |
-| Create / edit own itineraries | Yes | Yes |
-| View all salespeople''s itineraries | No | Yes |
-| Pick images, generate PDFs | Yes | Yes |
-| Override markup per itinerary | 8-30% | Any |
-| View net cost / margin in editor | Yes | Yes |
-| Access `/admin/settings` | No | Yes |
-| View full version audit trail | No | Yes |
-
-Session cookie: `trippygo_session`. Shared session contract with the TrippyGo leads tracker:
-
-```typescript
-{ id: string, name: string, email: string, phone: string, role: "admin" | "sales" }
+.
+├── src/
+│   ├── app/                      # Next.js 16 App Router
+│   │   ├── page.tsx              # Executive Workbench & Proposal Dashboard
+│   │   ├── itineraries/[id]/edit # Two-Pane Proposal Editor & Live Preview
+│   │   ├── admin/settings        # Commercial Governance & Agency Settings
+│   │   ├── print/[id]            # HMAC-Protected Headless Print Route
+│   │   ├── api/                  # RESTful API Endpoints (extract, flights, etc.)
+│   ├── components/
+│   │   ├── dashboard/            # WorkbenchHeader, ItineraryTable, NewItineraryModal
+│   │   ├── editor/               # FlightsPanel, AirportInput, PricingPanel, etc.
+│   ├── lib/
+│   │   ├── config/               # Agency runtime settings & default fallback
+│   │   ├── db/                   # Itinerary CRUD, listing, and version snapshots
+│   │   ├── extraction/           # Gemini, Claude, and OpenAI client wrappers
+│   │   ├── flights/              # Journey-first grouping, airports dict, layover math
+│   │   ├── pricing.ts            # Paise math, Indian GST, and rounding engine
+│   │   ├── schema/               # Zod ItinerarySchema, migrateItinerarySchema
+│   │   ├── security/             # SSRF firewall, MIME and magic byte validation
+│   ├── templates/itinerary/      # Cormorant & Plus Jakarta Sans A4 Print Templates
+├── services/renderer/            # Standalone Playwright Chromium PDF Microservice
+├── docs/                         # Architecture, UI Redesign, and Privacy Specs
+├── sample-itineraries/           # 20 Realistic DMC supplier test fixtures
+├── ARCHITECTURE.md               # Detailed system design specification
+├── Dockerfile                    # Multi-stage Next.js production build
+├── docker-compose.yml            # Multi-container local & server cluster
+└── package.json
 ```
 
 ---
 
-## 13. Pricing & GST Logic
+## 10. Further Documentation
 
-All computation is in `src/lib/pricing.ts` — pure functions, zero side effects.
-
-### Calculation flow
-
-```
-Net Amount (paise)
-  -> + Markup (percent or flat, in paise)
-  -> = Pre-rounding Selling Price
-  -> Apply rounding rule (nearest Rs 1 / Rs 50 / Rs 100)
-  -> = Selling Price
-  -> Compute GST (based on mode)
-  -> Output PricingBreakdown
-```
-
-### GST modes
-
-| Mode | Behaviour | PDF display |
-|------|-----------|------------|
-| `inclusive` | GST backed out of selling price | "5% GST Inclusive (Rs X,XXX)" |
-| `extra` | GST added on top of selling price | Base price + GST line + total + SAC 998552 |
-| `hidden` | All-inclusive, no GST line | Statutory disclosure only |
-
-### Traveller pricing units
-
-| Type | Unit | % of Adult Price |
-|------|:----:|:----------------:|
-| Adult | 1.0 | 100% |
-| Child with bed | 0.70 | 70% |
-| Child without bed | 0.40 | 40% |
-| Infant | 0.00 | Free |
-
-### TCS (Tax Collected at Source)
-
-When enabled in admin settings, a distinct statutory line is printed on the PDF:
-*"TCS @ applicable rates under Sec 206C to be collected separately"*
-This is never folded into the GST calculation.
+- **System Architecture Deep-Dive:** [`ARCHITECTURE.md`](file:///c:/programming-files/WEB-DEV/TrippyGo/TrippyGo-PDF-Itinerary-Generator/ARCHITECTURE.md)
+- **Data Privacy & LLM Ingestion:** [`docs/DATA_PRIVACY_NOTE.md`](file:///c:/programming-files/WEB-DEV/TrippyGo/TrippyGo-PDF-Itinerary-Generator/docs/DATA_PRIVACY_NOTE.md)
+- **Workbench Redesign Specification:** [`docs/HOMEPAGE_WORKBENCH_REDESIGN_PLAN.md`](file:///c:/programming-files/WEB-DEV/TrippyGo/TrippyGo-PDF-Itinerary-Generator/docs/HOMEPAGE_WORKBENCH_REDESIGN_PLAN.md)
+- **Flight Details Architecture:** [`docs/FLIGHT_DETAILS_UI_REDESIGN_PLAN.md`](file:///c:/programming-files/WEB-DEV/TrippyGo/TrippyGo-PDF-Itinerary-Generator/docs/FLIGHT_DETAILS_UI_REDESIGN_PLAN.md)
+- **A4 Portrait Cover Blueprint:** [`docs/A4_PORTRAIT_COVER_IMAGES_IMPLEMENTATION_PLAN.md`](file:///c:/programming-files/WEB-DEV/TrippyGo/TrippyGo-PDF-Itinerary-Generator/docs/A4_PORTRAIT_COVER_IMAGES_IMPLEMENTATION_PLAN.md)
 
 ---
 
-## 14. Data Privacy Note
-
-See `docs/DATA_PRIVACY_NOTE.md` for full details.
-
-**Summary:** Under Anthropic''s Commercial API Terms, customer prompts and supplier itinerary inputs are **never used to train models** by default. API data is retained for up to 30 days for safety monitoring only. Zero Data Retention (ZDR) is available on request for enterprise plans.
-
-The agency should review and sign off on this before processing real client/supplier data through the extraction API.
-
----
-
-## 15. Troubleshooting
-
-### PDF generation fails silently
-
-1. Check `docker compose logs renderer` for Chromium errors.
-2. Confirm `shm_size: "2gb"` is in `docker-compose.yml` for the renderer service.
-3. Verify `INTERNAL_RENDER_SECRET` is identical in both web and renderer environments.
-4. Check renderer health: `curl http://localhost:3001/health`
-
-### Chromium crashes with ERR_INSUFFICIENT_RESOURCES
-
-The renderer is running out of shared memory. Ensure `shm_size: "2gb"` is in Docker Compose. This affects large, image-heavy itineraries (10+ days).
-
-### `drizzle-kit migrate` fails
-
-Verify `DATABASE_URL` is reachable. Inside Docker Compose use:
-`docker compose exec web npx drizzle-kit migrate`
-The connection string must use the internal Docker hostname (`db`), not `localhost`.
-
-### Images appear blank in generated PDF
-
-The readiness probe waits for all images to load before toggling `meta[name=ready]` to `"true"`. If images fail (network error, hotlink block), the PDF captures early. Check:
-- Image CDN URLs reachable from inside the renderer container.
-- Unsplash/Pexels URLs not blocked by egress firewall rules.
-
-### Net price appears in generated PDF
-
-This should never happen; the PDF leak test catches it in CI. If seen locally:
-1. Run `npm run test:leak` — it shows exactly which string leaked and on which page.
-2. Ensure `computeClientView()` is called before passing data to `ItineraryTemplate`.
-3. Confirm `netAmountPaise` and `markup` are not present in React props to the print route.
-
-### S3 uploads fail in development
-
-Storage auto-falls-back to `.uploads/` on disk. To use MinIO:
-1. Start it: `docker compose up minio`
-2. Create bucket: open `http://localhost:9001` (minioadmin / minioadmin) -> Create Bucket -> `trippygo-itineraries`
-3. Set `S3_ENDPOINT=http://localhost:9000` and `S3_FORCE_PATH_STYLE=true` in `.env.local`
-
-### Extraction returns empty or low-quality result
-
-- Without `ANTHROPIC_API_KEY`, the offline heuristic parser runs (lower quality by design).
-- With the key, low scores mean the prompt needs tuning. Run `npm run test:extraction` to see which fields are failing across the 20-fixture harness, then adjust `src/lib/extraction/prompt.ts`.
-
----
-
-## 16. Future Roadmap (Post v1)
-
-Parked — do not scope into v1.
-
-- **Lead-to-quote link** — create itinerary from a leads tracker record; attach PDF to lead on send
-- **Shareable web version** — same template served as a private link with view tracking
-- **Saved package templates** — clone past itineraries; reusable route templates
-- **Own image library** — agency uploads and tags its own destination photos
-- **Option comparison** — 2-3 hotel-tier variants in one PDF
-- **Email / WhatsApp delivery** — send directly from app
-- **Client approval flow** — comments on the web version
-- **Hindi & regional languages** — Devanagari font in Docker image; Intl RTL support
-- **Supplier rate cards** — auto-fill net price from stored rate table
-- **AI description polishing** — Claude rewrites supplier text in agency tone (always suggestion, never auto-applied)
-
----
-
-## License
-
-Internal proprietary software. All rights reserved — TrippyGo, 2026.
-
----
-
-*Last updated: October 2026. See IMPLEMENTATION_PLAN.md for the full phase-by-phase build log.*
+**© 2026 TrippyGo by Friends Travel.** Built for travel professionals.

@@ -1,7 +1,7 @@
 export const agencyDefaults = {
   brand: {
     name: "TrippyGo",
-    tagline: "By Friends Travel",
+    tagline: "by Friends Travels",
     logoPath: "/brand/trippygo-logo.png",
     colors: {
       primaryRed: "#c92229",
@@ -47,10 +47,14 @@ export const agencyDefaults = {
     language: "en",
     showSalespersonContact: true,
     companyDetails: {
-      phone: "+91-9871597736",
-      email: "info@trippygo.in",
-      website: "https://trippygo.in",
-      address: "Office 402, Trade Hub, Mumbai, Maharashtra 400001",
+      parentCompany: "Friends Travels",
+      name: "TrippyGo by Friends Travels",
+      phone: "+91 9941000075",
+      phone2: "+91 7557500007",
+      email: "harkiran@trippygo.in",
+      website: "https://www.trippygo.in/",
+      address: "Eden Tower, Phase 8B, Sector 91, Mohali, Punjab",
+      branches: ["Patiala", "Jalandhar", "Mohali", "Delhi"],
     },
     paymentDetails: {
       upiId: "7982578247@okbizaxis",
@@ -60,11 +64,11 @@ export const agencyDefaults = {
       ifscCode: "HDFC0000280",
     },
     socialProof: {
-      googleRating: "4.7/5",
-      googleReviewsCount: "2000+ reviews",
+      googleRating: "5/5",
+      googleReviewsCount: "Google 5-Star Rating",
       instagramFollowers: "250k+",
       awardTitle: "The Best International Holiday Brand in India",
-      trustedTravellers: "100k+ travellers",
+      trustedTravellers: "1M+ travellers",
     },
   },
   auth: {

@@ -8,7 +8,9 @@ import {
   createRateLimitResponse,
 } from "@/lib/security/rate-limit";
 
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB strict limit
+export const maxDuration = 60; // Allow up to 60s processing for large PDFs
+
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 MB limit
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,11 +71,11 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // 10 MB size limit validation
+      // 50 MB size limit validation
       if (file.size > MAX_UPLOAD_BYTES) {
         return NextResponse.json(
           {
-            error: `Payload Too Large: File size exceeds the 10 MB limit (${(
+            error: `Payload Too Large: File size exceeds the 50 MB limit (${(
               file.size /
               (1024 * 1024)
             ).toFixed(2)} MB).`,

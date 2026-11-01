@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getItinerary, saveItineraryData } from "@/lib/db/itineraries";
+import { getItinerary, saveItineraryData, deleteItinerary } from "@/lib/db/itineraries";
 import { validateItinerary } from "@/lib/schema/validate";
 
 export async function GET(
@@ -51,6 +51,22 @@ export async function PATCH(
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to update itinerary", details: (error as Error).message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const deleted = await deleteItinerary(id);
+    return NextResponse.json({ success: deleted, id });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to delete itinerary", details: (error as Error).message },
       { status: 500 }
     );
   }

@@ -1,7 +1,7 @@
 # TrippyGo PDF Itinerary Design Specification
 
-> **Version:** 2.0  
-> **Inspired by:** Vietnam Itinerary Reference (`Refrences/Vietnam Itinerary`)  
+> **Version:** 3.0 (Bespoke Editorial Luxury System)  
+> **Aesthetic Archetype:** High-End Travel Journal (*Condé Nast Traveler* / *Kinfolk* / Luxury Atelier)  
 > **Brand Identity:** TrippyGo by Friends Travel (`Brand Assets/TrippyGo`)  
 > **Target Format:** High-Resolution A4 Multi-Page PDF Document (Print & Screen Optimized)  
 > **Engine:** Playwright Headless Chromium + TailwindCSS / Print CSS3
@@ -10,77 +10,68 @@
 
 ## 1. Executive Design Vision & Aesthetic Direction
 
-### 1.1 The Shift to Luxury Editorial Travel Brochures
-Standard B2B travel itineraries are frequently presented as plain, unstyled tables or generic word-processor exports. The TrippyGo design philosophy turns every quotation into an **editorial travel magazine and luxury voucher package**.
+### 1.1 The Shift from AI Slop to Bespoke Editorial Travel Publications
+Standard AI-generated PDFs look like web SaaS dashboards dumped onto paper: generic card containers, outline icon bloat, neon pill badges, and generic Inter sans-serif text. 
 
-Inspired by the benchmark reference (*Vietnam Itinerary - Harkiran Singh*), the TrippyGo itinerary combines:
-1. **Bold Visual Cover**: Full-bleed hero photography with dark cinematic vignette overlays, sharp modern sans-serif typography, and floating frosted glass/white cards.
-2. **Tactile Voucher Metaphors**:
-   - **Flights** styled as physical **Airline Boarding Passes**, complete with perforated vertical cut lines, semi-circular notch cutouts, layover bars, and baggage weight tags.
-   - **Accommodations** styled as **Hotel Vouchers** with night count pills, check-in/out schedules, and amenity badges.
-   - **Payments** styled as **Commercial Invoices** with dark navy trust banners, dynamic UPI QR codes, and bank wire cards.
-3. **Structured Day Narratives**: Clean modular day cards featuring bold titles, date stamps, stay/meal pill tags, and symmetrical two-photo showcase grids.
-4. **Emotional & Social Proof Sign-Off**: A grand back-cover spread featuring real traveler photo mosaics, trust badges (Google Reviews, social followings, industry awards), and five core pillars of reliability.
+The TrippyGo v3 design system replaces this with an **authentic editorial travel publication**:
+1. **Editorial Serifs & Clear Contrast:** High-contrast serif headlines (**Cormorant Garamond**) paired with geometric, print-dense sans-serif body copy (**Plus Jakarta Sans**) and an intimate signature script (**Caveat**).
+2. **Whitespace over Boxes:** Elimination of floating cards. Sections breathe naturally on a crisp canvas (`#fafaf7`) with delicate architectural hairline dividers (`#e2e8f0` / `rgba(9, 28, 62, 0.12)`).
+3. **Restrained Color Discipline (60-30-10):**
+   - **60% Dominant:** Warm, luminous ivory/white background (`#fafaf7` / `#ffffff`).
+   - **30% Structural:** Deep architectural navy (`#091c3e`) for primary headings, section dividers, and structural grounding.
+   - **10% Accent:** Signature TrippyGo Red (`#c92229`) reserved strictly for focal points (day markers, price highlights, callouts). Champagne gold (`#f59e0b`) is isolated to the cover.
+4. **Cinematic Real Photography:** A single dominant hero photo per spread rather than duplicate thumbnail grids.
+5. **Authentic Editorial Voice:** Elimination of generic filler phrases ("Destination Spotlight", "Carefully designed experiences").
 
 ---
 
 ## 2. TrippyGo Brand Identity & Color System
 
-TrippyGo's visual signature is built around high-energy **Trippy Red** and confident, professional **Trippy Royal Blue**, grounded by deep oceanic navy backgrounds and accented with warm golden-amber highlights.
-
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        TRIPPYGO COLOR PALETTE                          │
+│                        TRIPPYGO 60-30-10 PALETTE                       │
 ├─────────────────┬──────────────────┬─────────────────┬─────────────────┤
-│   TRIPPY RED    │   TRIPPY BLUE    │    DEEP NAVY    │   GOLD ACCENT   │
-│     #c92229     │     #1556a6      │     #091c3e     │     #f59e0b     │
-│ rgba(201,34,41) │ rgba(21,86,166)  │  rgba(9,28,62)  │ rgba(245,158,11)│
+│  CANVAS / BG    │    DEEP NAVY     │   HERITAGE RED  │   GOLD ACCENT   │
+│     #fafaf7     │     #091c3e      │     #c92229     │     #f59e0b     │
+│  (60% Dominant) │  (30% Structure) │  (10% Accent)   │  (Cover Only)   │
 └─────────────────┴──────────────────┴─────────────────┴─────────────────┘
 ```
 
 ### 2.1 Color Tokens & Usage Matrix
 
-| Token Name | Hex Code | RGB | Role / Usage |
-| :--- | :--- | :--- | :--- |
-| `--brand-red` | `#c92229` | `201, 34, 41` | Primary brand accent: logo text, active badges, key callouts, cancellation penalties |
-| `--brand-blue` | `#1556a6` | `21, 86, 166` | Secondary brand accent: logo infinity loop, flight routes, stay badges, links |
-| `--brand-navy` | `#091c3e` | `9, 28, 62` | Luxury dark surfaces: table headers, pricing summary hero cards, footer bars |
-| `--brand-gold` | `#f59e0b` | `245, 158, 11` | Warm accent: decorative section underlines, hotel night badges, ratings, star icons |
-| `--surface-card` | `#ffffff` | `255, 255, 255` | White container cards, floating panels, data tables |
-| `--surface-bg` | `#f8fafc` | `248, 250, 252` | Soft background for print pages (avoids harsh glare, prints as pure crisp white) |
-| `--surface-tint-red` | `#fef2f2` | `254, 242, 242` | Soft red pill backgrounds (exclusions, cancellation warnings) |
-| `--surface-tint-blue` | `#eff6ff` | `239, 246, 255` | Soft blue pill backgrounds (activities, route tags, info notices) |
-| `--surface-tint-gold` | `#fffbeb` | `255, 251, 235` | Soft amber tint (flight layovers, security guarantee banners) |
-| `--surface-tint-green` | `#ecfdf5` | `236, 253, 245` | Soft emerald tint (inclusions, confirmed status) |
-| `--text-primary` | `#0f172a` | `15, 23, 42` | Deep charcoal for headings, pricing values, primary text |
-| `--text-body` | `#334155` | `51, 65, 85` | Balanced slate for narrative descriptions, paragraphs, lists |
-| `--text-muted` | `#64748b` | `100, 116, 139` | Subtle captions, timestamps, airport names, sub-labels |
-| `--border-subtle` | `#e2e8f0` | `226, 232, 240` | Clean 1px card borders, table dividers |
+| Token Name | Hex Code | Role / Usage |
+| :--- | :--- | :--- |
+| `--canvas-bg` | `#fafaf7` | Warm ivory background for printed pages (eliminates sterile glare) |
+| `--brand-navy` | `#091c3e` | Primary structural tone: headings, table headers, architectural dividers |
+| `--brand-red` | `#c92229` | Signature brand accent: day indicators, price highlights, callouts |
+| `--brand-gold` | `#f59e0b` | Champagne gold: reserved for cover badges and subtle luxury trust stars |
+| `--surface-card` | `#ffffff` | Pure white for structured tabular or ticket elements |
+| `--text-primary` | `#091c3e` | Deep architectural navy for primary titles and high-contrast labels |
+| `--text-body` | `#334155` | Balanced slate for narrative descriptions, paragraphs, lists |
+| `--text-muted` | `#64748b` | Subtle captions, timestamps, airport names, sub-labels |
+| `--border-subtle` | `#e2e8f0` | Clean 1px hairline rules |
+| `--border-editorial` | `rgba(9, 28, 62, 0.12)` | Sophisticated architectural section dividers |
 
-### 2.2 Brand Logo Specifications
-- **Full Brand Logo (`Trippygo Logo.png`)**:
-  - Wordmark `"Trippy"` rendered in `#c92229` with map pin & ascending airplane icon replacing the dot of `"i"`.
-  - Wordmark `"go"` rendered in `#1556a6` with infinity loop geometry.
-  - Subtitle `"BY FRIENDS TRAVEL"` in crisp uppercase tracked sans-serif (`#1e293b`).
-- **Logo Variants for PDF Templates**:
-  1. **Cover Page**: Displayed top-right inside a circular white emblem badge with subtle drop-shadow or cleanly rendered in white/color lockup over transparent dark gradient.
-  2. **Page Headers & Footers**: Horizontal compact lockup with tagline `"By Friends Travel"`.
-  3. **Back Cover**: Prominent centerpiece brand lockup with cursive *"Thank you for choosing"* and flight path illustration.
+### 2.2 Explicit Anti-Pattern Bans (Quality Floor)
+- ❌ **No Nested Cards:** Never wrap sections inside bordered white boxes with drop shadows.
+- ❌ **No Icon Spam:** Never prepend decorative outline icons to obvious labels (e.g., no calendar icons before "Check In").
+- ❌ **No Pill Badge Flood:** Replace `rounded-full` pills with clean inline metadata text or delicate hairline badges.
+- ❌ **No Duplicate Imagery:** Never duplicate the same photo in a split thumbnail grid.
+- ❌ **No SaaS Feature Grids:** Back page 5-column icon boxes replaced by founder's note and traveler photo mosaic.
 
 ---
 
-## 3. Typography Hierarchy & Google Fonts
+## 3. Typography Hierarchy & Self-Hosted Fonts
 
-To achieve the modern magazine feel of the reference document, we implement a cohesive three-tier type scale:
+To achieve the timeless luxury of high-end travel journalism, all fonts are self-hosted in `public/fonts/` for offline Playwright Chromium rendering:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        TYPOGRAPHY SYSTEM                               │
 ├─────────────────────┬──────────────────┬───────────────────────────────┤
-│ Heading / Display   │ Plus Jakarta Sans│ 800 ExtraBold & 700 Bold      │
-│ Body & Data         │ Inter            │ 400 Regular & 500 Medium      │
-│ Handwritten Accent  │ Caveat / Courgette│ 700 Bold Script               │
-│ Monospace Data      │ JetBrains Mono   │ 600 SemiBold (Codes, PNR, ₹) │
+│ Display / Headlines │Cormorant Garamond│ 700 Bold, 600 SemiBold, Italic│
+│ Body & Logistics    │Plus Jakarta Sans │ 400 Regular, 600 SemiBold     │
+│ Handwritten Accent  │Caveat            │ 700 Bold Script (Sign-off)    │
 └─────────────────────┴──────────────────┴───────────────────────────────┘
 ```
 
@@ -88,15 +79,16 @@ To achieve the modern magazine feel of the reference document, we implement a co
 
 | Element | Font Family | Size | Weight | Line Height | Case / Tracking | Color |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Cover Title** | Plus Jakarta Sans | 38px / 2.4rem | 800 ExtraBold | 1.15 | Title / Normal | `#ffffff` |
-| **Section Title** | Plus Jakarta Sans | 24px / 1.5rem | 800 ExtraBold | 1.25 | Title / -0.01em | `#091c3e` |
-| **Day Title** | Plus Jakarta Sans | 18px / 1.15rem | 700 Bold | 1.3 | Uppercase / Normal | `#091c3e` |
-| **Hero Price** | Plus Jakarta Sans / Mono | 32px / 2rem | 900 Black | 1.1 | Normal | `#ffffff` / `#091c3e` |
-| **Airport Code** | Plus Jakarta Sans | 24px / 1.5rem | 800 ExtraBold | 1.1 | Uppercase | `#c92229` / `#1556a6` |
-| **Body Paragraph** | Inter | 13px / 0.82rem | 400 Regular | 1.55 | Normal | `#334155` |
-| **Card Subtitles** | Inter | 11px / 0.7rem | 600 SemiBold | 1.4 | Uppercase / +0.05em | `#64748b` |
-| **Badge Pills** | Inter | 11px / 0.7rem | 600 SemiBold | 1.2 | Normal | Contextual |
-| **Script Sign-off**| Caveat / Courgette| 36px / 2.25rem | 700 Bold | 1.1 | Cursive Script | `#c92229` / `#f59e0b` |
+| **Cover Title** | Cormorant Garamond | 48px–56px | 700 Bold | 1.1 | Normal | `#ffffff` |
+| **Section Title** | Cormorant Garamond | 26px–30px | 700 Bold | 1.2 | Normal | `#091c3e` |
+| **Section Kicker** | Plus Jakarta Sans | 9.5px | 700 Bold | 1.0 | Uppercase / +0.25em | `#64748b` |
+| **Day Numeral** | Cormorant Garamond | 28px–32px | 700 Bold | 1.0 | Normal | `#091c3e` |
+| **Day Subhead** | Plus Jakarta Sans | 11px | 700 Bold | 1.2 | Uppercase / +0.15em | `#c92229` |
+| **Hero Price** | Cormorant Garamond | 36px | 700 Bold | 1.1 | Normal | `#091c3e` |
+| **Airport Code** | Plus Jakarta Sans | 28px | 800 ExtraBold | 1.1 | Uppercase | `#091c3e` |
+| **Body Paragraph** | Plus Jakarta Sans | 10pt–10.5pt | 400 Regular | 1.35 | Normal | `#334155` |
+| **Metadata Strip** | Plus Jakarta Sans | 9pt | 600 SemiBold | 1.2 | Uppercase / +0.08em | `#64748b` |
+| **Script Sign-off**| Caveat | 32px | 700 Bold | 1.1 | Cursive Script | `#c92229` |
 
 ---
 
@@ -613,21 +605,9 @@ Promise.all([
 
 ## 6. Implementation Plan & Migration Steps
 
-To upgrade the current itinerary template to this benchmark standard:
-
-| Step | Action Item | Target File(s) |
-| :--- | :--- | :--- |
-| **1** | Copy TrippyGo brand logo to `public/brand/` for reliable static serving in print | `public/brand/trippygo-logo.png` |
-| **2** | Update `src/styles/print.css` with A4 page sizing, notch shapes, and print tokens | `src/styles/print.css` |
-| **3** | Create dedicated `FlightCard.tsx` component (boarding pass styling with ticket notches) | `src/templates/itinerary/FlightCard.tsx` |
-| **4** | Redesign `CoverPage.tsx` with full-bleed hero, TrippyGo logo badge, and client card | `src/templates/itinerary/CoverPage.tsx` |
-| **5** | Redesign `TripGlance.tsx` into the benchmark `Trip Summary` table | `src/templates/itinerary/TripGlance.tsx` |
-| **6** | Redesign `StaysTable.tsx` to match the hotel voucher card design | `src/templates/itinerary/StaysTable.tsx` |
-| **7** | Create `PaymentPage.tsx` with UPI QR code generator and bank transfer card | `src/templates/itinerary/PaymentPage.tsx` |
-| **8** | Redesign `DayBlock.tsx` with badge pills and two-photo grid spreads | `src/templates/itinerary/DayBlock.tsx` |
-| **9** | Redesign `BackPage.tsx` with traveler mosaic, trust pillars, and branded footer | `src/templates/itinerary/BackPage.tsx` |
-| **10**| Update `ItineraryTemplate.tsx` page flow and run end-to-end PDF render tests | `src/templates/itinerary/ItineraryTemplate.tsx` |
+For the active phase-by-phase implementation plan and checklist, see:
+[`docs/PDF_REDESIGN_IMPLEMENTATION_PLAN.md`](docs/PDF_REDESIGN_IMPLEMENTATION_PLAN.md)
 
 ---
 
-*Document finalized & aligned with TrippyGo Brand Standards and Vietnam Itinerary Benchmark.*
+*Document finalized & aligned with TrippyGo Editorial Luxury System v3.*

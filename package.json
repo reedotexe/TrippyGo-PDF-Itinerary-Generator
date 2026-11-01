@@ -1,5 +1,5 @@
 {
-  "name": "trippygo-app",
+  "name": "trippygo-pdf-itinerary-generator",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -34,6 +34,7 @@
     "qrcode": "^1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-easy-crop": "^6.2.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -47,6 +48,7 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "shadcn": "^4.23.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

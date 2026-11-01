@@ -22,11 +22,14 @@ export async function GET(req: NextRequest) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = ext === ".pdf" ? "application/pdf" : ext === ".txt" ? "text/plain" : "application/octet-stream";
 
+  const isAttachment = searchParams.get("download") === "1";
+  const dispositionType = isAttachment ? "attachment" : "inline";
+
   return new NextResponse(fileBuffer, {
     status: 200,
     headers: {
       "Content-Type": contentType,
-      "Content-Disposition": `attachment; filename="${path.basename(filePath)}"`,
+      "Content-Disposition": `${dispositionType}; filename="${path.basename(filePath)}"`,
       "Content-Length": fileBuffer.length.toString(),
     },
   });

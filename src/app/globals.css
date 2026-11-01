@@ -1,16 +1,27 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --brand-red: #c92229;
-    --brand-blue: #1556a6;
-    --brand-navy: #091c3e;
-    --brand-gold: #f59e0b;
-    --surface-tint-red: #fef2f2;
-    --surface-tint-blue: #eff6ff;
-    --surface-tint-gold: #fffbeb;
-    --surface-tint-green: #ecfdf5;
-  }
+@theme {
+  --color-brand-red: #c92229;
+  --color-brand-blue: #1556a6;
+  --color-brand-navy: #091c3e;
+  --color-brand-gold: #f59e0b;
+  --color-brand-slate: #0f172a;
+  --color-canvas-ivory: #fafaf7;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+:root {
+  --brand-red: #c92229;
+  --brand-navy: #091c3e;
+  --brand-gold: #f59e0b;
+  --brand-slate: #0f172a;
+  --canvas-bg: #fafaf7;
+}
+
+::selection {
+  background-color: #c92229;
+  color: #ffffff;
 }
 
 @media print {
@@ -31,6 +42,6 @@
   }
   @page {
     size: A4 portrait;
-    margin: 8mm 6mm;
+    margin: 0;
   }
 }

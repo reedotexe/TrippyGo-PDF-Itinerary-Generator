@@ -1,87 +1,222 @@
 import React from "react";
-import { ClientPricingView } from "@/lib/schema/client-view";
-import { MapPin, Plane, ShieldCheck, Clock } from "lucide-react";
+import { ClientPricingView, ClientPriceItem } from "@/lib/schema/client-view";
 import { SectionTitle } from "./PageHeaderFooter";
+import { Plane, Building2, MapPin, FileCheck2, CheckCircle2 } from "lucide-react";
 
 interface PriceTableProps {
   pricing: ClientPricingView;
   showSectionTitle?: boolean;
 }
 
+function formatBasis(basis: string): string {
+  switch (basis) {
+    case "per_person_twin_sharing":
+      return "Per Person (Twin Sharing Basis)";
+    case "per_person":
+      return "Per Person";
+    case "total_group":
+      return "Total Package (All Travellers)";
+    case "per_room":
+      return "Per Room / Night";
+    default:
+      return "Per Person Twin Sharing";
+  }
+}
+
+function getPillarVisuals(category: ClientPriceItem["category"]) {
+  switch (category) {
+    case "flight":
+      return {
+        icon: Plane,
+        iconBg: "bg-blue-50 text-blue-700 border-blue-200/80",
+      };
+    case "hotel":
+      return {
+        icon: Building2,
+        iconBg: "bg-indigo-50 text-indigo-700 border-indigo-200/80",
+      };
+    case "visa":
+      return {
+        icon: FileCheck2,
+        iconBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+      };
+    case "land":
+    case "package":
+    default:
+      return {
+        icon: MapPin,
+        iconBg: "bg-amber-50 text-amber-700 border-amber-200/80",
+      };
+  }
+}
+
 export default function PriceTable({ pricing, showSectionTitle = true }: PriceTableProps) {
   const isZeroOrMissing = !pricing.finalPricePaise || pricing.finalPricePaise <= 0;
   const priceDisplay = isZeroOrMissing ? "On Request" : `₹ ${pricing.finalPriceFormatted}`;
 
-  // Estimate a realistic Land vs Flight split if total price is provided
-  const hasPrice = pricing.finalPriceRupees > 0;
-  const landPriceFormatted = hasPrice
-    ? Math.round(pricing.finalPriceRupees * 0.44).toLocaleString("en-IN")
-    : "On Request";
-  const flightPriceFormatted = hasPrice
-    ? Math.round(pricing.finalPriceRupees * 0.56).toLocaleString("en-IN")
-    : "Included";
+  // Only render active, strictly INCLUDED components. Never display excluded items!
+  const items = pricing.items && pricing.items.length > 0 ? pricing.items : [];
 
   return (
-    <section className="avoid-break mb-6">
-      {showSectionTitle && <SectionTitle title="Pricing & Payment" />}
+    <section className="avoid-break mb-5 font-body">
+      {showSectionTitle && (
+        <SectionTitle
+          kicker="INVESTMENT // PROPOSAL QUOTE"
+          title={pricing.pricingType === "total_only" ? "Total Package Price" : "Pricing & Package Breakup"}
+        />
+      )}
 
-      {/* Dark Navy Commercial Card matching Reference Pages 4 & 11 */}
-      <div className="bg-[#091c3e] text-white rounded-2xl p-6 md:p-8 shadow-lg avoid-break">
-        {/* Sub-costs Split (Land vs Flight) */}
-        <div className="grid grid-cols-2 gap-4 pb-6">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <div className="flex items-center gap-1.5 text-amber-400 text-[10px] md:text-xs font-bold uppercase tracking-wider">
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Land Package</span>
+      {/* Modern High-End Commercial Card */}
+      <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs">
+        {/* Deep Navy Executive Header */}
+        <div className="bg-[#091c3e] text-white px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[9.5px] font-bold uppercase tracking-[0.24em] text-[#FFDE59]">
+                {pricing.pricingType === "total_only" ? "Total Package Price" : "Package Price Breakup"}
+              </span>
+              <span className="text-[10px] text-slate-300 font-medium">
+                / {pricing.priceDistribution === "per_passenger"
+                  ? `Split Distribution (${pricing.passengerCount} Pax)`
+                  : pricing.pricingType === "supplier"
+                  ? "Supplier Package"
+                  : pricing.pricingType === "total_only"
+                  ? "All-Inclusive Package"
+                  : "Itemized Package"}
+              </span>
             </div>
-            <div className="text-xl md:text-2xl font-bold font-display text-white mt-1">
-              ₹ {landPriceFormatted}
+            <h3 className="text-base md:text-lg font-bold text-white tracking-tight mt-0.5 font-serif-luxury">
+              {pricing.pricingType === "total_only" ? "Total Package Investment" : "Comprehensive Travel Investment"}
+            </h3>
+            <div className="text-[11px] text-slate-300 mt-0.5">
+              {formatBasis(pricing.basis)}
+              {pricing.priceDistribution === "per_passenger" && (
+                <span> • Split for {pricing.passengerCount} Passengers</span>
+              )}
             </div>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <div className="flex items-center gap-1.5 text-amber-400 text-[10px] md:text-xs font-bold uppercase tracking-wider">
-              <Plane className="w-3.5 h-3.5" />
-              <span>Flight Cost</span>
-            </div>
-            <div className="text-xl md:text-2xl font-bold font-display text-white mt-1">
-              ₹ {flightPriceFormatted}
+          <div className="text-right">
+            <span className="text-[9.5px] uppercase font-bold tracking-[0.2em] text-slate-300 block">
+              Total Package Investment
+            </span>
+            <div className="font-serif-luxury text-3xl md:text-4xl font-bold text-white mt-0.5 tracking-tight drop-shadow-xs">
+              {priceDisplay}
             </div>
           </div>
         </div>
 
-        {/* Total Package Value Hero */}
-        <div className="pt-6 border-t border-white/15 text-center">
-          <div className="text-xs md:text-sm font-bold uppercase tracking-widest text-amber-400 font-display">
-            Total Package Value
+        {/* Breakup Rows: ONLY active included components are rendered */}
+        {pricing.pricingType === "total_only" && pricing.priceDistribution === "per_passenger" ? (
+          <div className="divide-y divide-slate-100 bg-white">
+            <div className="px-5 py-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 bg-amber-50 text-amber-700 border-amber-200/80">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-serif-luxury font-bold text-slate-900 text-sm md:text-base">
+                      Total All-Inclusive Package
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> Included
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] text-slate-500 mt-0.5">
+                    Comprehensive package covering all confirmed stays, transfers, sightseeing, and services
+                  </p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="flex items-baseline justify-end gap-1">
+                  <span className="text-sm md:text-base font-bold font-mono text-[#091c3e]">
+                    ₹ {Math.round(pricing.basePricePaise / 100 / pricing.passengerCount).toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-500">/ person</span>
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                  Total: ₹ {pricing.finalPriceFormatted} ({pricing.passengerCount} {pricing.passengerCount === 1 ? "passenger" : "passengers"})
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-4xl md:text-5xl font-black text-white font-display mt-1 drop-shadow-md tracking-tight">
-            {priceDisplay}
-          </div>
-          <div className="text-xs text-blue-200 mt-2 font-medium">
-            Tax Included. {pricing.gstMode === "inclusive" ? "5% GST Included" : "+ 5% GST"}
-            {pricing.tcsDisclaimer ? ` • ${pricing.tcsDisclaimer}` : " • ₹1,500 (TCS)"}
-          </div>
+        ) : items.length > 0 ? (
+          <div className="divide-y divide-slate-100 bg-white">
+            {items.map((item) => {
+              const { icon: Icon, iconBg } = getPillarVisuals(item.category);
 
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-4 pt-4 border-t border-white/10 text-[11px] text-slate-300">
-            <span className="capitalize">
-              Basis: <strong>{pricing.basis.replace(/_/g, " ")}</strong>
-            </span>
-            <span>•</span>
-            <span>
-              SAC Code: <strong>{pricing.sacCode || "998552"}</strong> (Tour Operator Services)
-            </span>
-            {pricing.validUntil && (
-              <>
-                <span>•</span>
-                <span className="text-amber-300 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  Valid till: <strong>{pricing.validUntil}</strong>
-                </span>
-              </>
-            )}
+              return (
+                <div
+                  key={item.key}
+                  className="px-5 py-3 flex items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+                >
+                  {/* Left: Icon & Pillar Name */}
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${iconBg}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-serif-luxury font-bold text-slate-900 text-sm md:text-base">
+                          {item.title}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Included
+                        </span>
+                      </div>
+                      {item.subtitle && (
+                        <p className="text-[11.5px] text-slate-500 truncate mt-0.5 max-w-sm md:max-w-md">
+                          {item.subtitle}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Item Amount */}
+                  <div className="text-right shrink-0">
+                    {pricing.priceDistribution === "per_passenger" ? (
+                      <div>
+                        <div className="flex items-baseline justify-end gap-1">
+                          <span className="text-sm md:text-base font-bold font-mono text-[#091c3e]">
+                            ₹ {item.splitAmountFormatted}
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-500">/ person</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          Total: ₹ {item.amountFormatted} ({pricing.passengerCount} {pricing.passengerCount === 1 ? "passenger" : "passengers"})
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm md:text-base font-bold font-mono text-[#091c3e]">
+                        ₹ {item.amountFormatted}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          <div className="p-5 text-center bg-slate-50/50">
+            <span className="text-xs text-slate-500">
+              Total Package Investment covers all mentioned inclusions, stays, and transfers.
+            </span>
+          </div>
+        )}
+
+        {/* Footer Meta Strip */}
+        {pricing.validUntil && (
+          <div className="bg-slate-50/90 border-t border-slate-200/80 px-5 py-2.5 flex items-center justify-between gap-2 text-[10.5px] text-slate-500">
+            <span className="text-slate-400">All prices in Indian Rupees (INR)</span>
+            <div className="font-medium text-[#c92229]">
+              Quote Valid Until: <span className="font-bold">{pricing.validUntil}</span>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

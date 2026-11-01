@@ -1,0 +1,696 @@
+[
+  {
+    "heading": "Trip Overview & Logistics",
+    "buttonCount": 6,
+    "buttons": [
+      {
+        "text": "",
+        "ariaLabel": "Remove destination Srinagar",
+        "title": "",
+        "classes": "w-6 h-6 inline-flex items-center justify-center rounded-full text-blue-600 hover:text-blue-900 hover:bg-blue-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      },
+      {
+        "text": "",
+        "ariaLabel": "Remove destination Gulmarg",
+        "title": "",
+        "classes": "w-6 h-6 inline-flex items-center justify-center rounded-full text-blue-600 hover:text-blue-900 hover:bg-blue-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      },
+      {
+        "text": "Add",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "min-h-[38px] px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+      },
+      {
+        "text": "Reset to Auto",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "text-xs text-red-600 hover:text-red-800 font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition border border-red-200"
+      },
+      {
+        "text": "Change Cover Photo",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-3.5 py-1.5 bg-[#091c3e] hover:bg-blue-900 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1.5"
+      },
+      {
+        "text": "Dal Lake Golden Shikara",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 hover:text-blue-700 border border-slate-200 text-[11px] font-medium transition text-slate-700 shadow-2xs flex items-center gap-1"
+      }
+    ],
+    "inputCount": 9,
+    "inputs": [
+      {
+        "id": "basic-package-title",
+        "tagName": "input",
+        "type": "text",
+        "value": "Kashmir 6N7D Royal Luxury",
+        "placeholder": "e.g. Exotic Bhutan – 8 Days from Bagdogra",
+        "label": "Package Title * (Cover Headline)"
+      },
+      {
+        "id": "basic-guest-name",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "e.g. Mr. & Mrs. Sharma (or Valued Traveller)",
+        "label": "Guest / Client Name (Optional)"
+      },
+      {
+        "id": "basic-new-dest",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Add destination (e.g. Gulmarg) and press Enter",
+        "label": "Destinations Circuit *"
+      },
+      {
+        "id": "basic-nights",
+        "tagName": "input",
+        "type": "number",
+        "value": "6",
+        "placeholder": "",
+        "label": "Nights"
+      },
+      {
+        "id": "basic-days",
+        "tagName": "input",
+        "type": "number",
+        "value": "7",
+        "placeholder": "",
+        "label": "Days"
+      },
+      {
+        "id": "basic-start-date",
+        "tagName": "input",
+        "type": "date",
+        "value": "2026-11-15",
+        "placeholder": "",
+        "label": "Trip Start Date"
+      },
+      {
+        "id": "basic-adults",
+        "tagName": "input",
+        "type": "number",
+        "value": "2",
+        "placeholder": "",
+        "label": "Adults (12+ yrs)"
+      },
+      {
+        "id": "basic-children",
+        "tagName": "input",
+        "type": "number",
+        "value": "0",
+        "placeholder": "",
+        "label": "Children (2–11 yrs)"
+      },
+      {
+        "id": "basic-rooms",
+        "tagName": "input",
+        "type": "number",
+        "value": "1",
+        "placeholder": "",
+        "label": "Rooms"
+      }
+    ],
+    "textCount": 4,
+    "sampleTexts": [
+      "The first visual page your client opens in the generated PDF proposal.",
+      "Custom Cover Active: Custom Direct UploadStandard landscape photos lose up to 60% of their horizontal edges on A4. Using a vertical composition preserves iconic landmarks and avoids text collisions.1-Click Presets for Srinagar:Dal Lake Golden Shikara",
+      "Standard landscape photos lose up to 60% of their horizontal edges on A4. Using a vertical composition preserves iconic landmarks and avoids text collisions.",
+      "Trip End Date (Computed)"
+    ]
+  },
+  {
+    "heading": "Travel Flights & Boarding Passes",
+    "buttonCount": 6,
+    "buttons": [
+      {
+        "text": "Search Flights",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-3.5 py-2 text-xs font-semibold text-white bg-[#091c3e] hover:bg-[#132c5b] rounded-lg shadow-sm transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-blue-500"
+      },
+      {
+        "text": "+ Outbound",
+        "ariaLabel": null,
+        "title": "Add an onward outbound sector",
+        "classes": "px-3 py-2 text-xs font-semibold text-blue-900 bg-blue-50/70 hover:bg-blue-100/80 border-r border-slate-200 transition flex items-center gap-1.5"
+      },
+      {
+        "text": "+ Return",
+        "ariaLabel": null,
+        "title": "Add a return inbound sector",
+        "classes": "px-3 py-2 text-xs font-semibold text-[#c92229] bg-red-50/70 hover:bg-red-100/80 transition flex items-center gap-1.5"
+      },
+      {
+        "text": "Auto-Suggest",
+        "ariaLabel": null,
+        "title": "Auto-generate standard round-trip flights for this destination",
+        "classes": "px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition flex items-center gap-1.5 shadow-2xs"
+      },
+      {
+        "text": "Add Outbound Flight",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-4 py-2 text-xs font-semibold text-white bg-[#091c3e] hover:bg-[#132c5b] rounded-lg shadow-sm transition flex items-center gap-1.5"
+      },
+      {
+        "text": "Auto-Suggest Round-Trip",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-2xs transition flex items-center gap-1.5"
+      }
+    ],
+    "inputCount": 0,
+    "inputs": [],
+    "textCount": 2,
+    "sampleTexts": [
+      "Configured flights render as authentic boarding passes on Page 3 of the client proposal.",
+      "Currently this proposal is marked as land-only without flight tickets. Add onward and return flight sectors to automatically render verified boarding passes with seamless layover connections."
+    ]
+  },
+  {
+    "heading": "Day-by-Day Itinerary (1 Days)",
+    "buttonCount": 12,
+    "buttons": [
+      {
+        "text": "Add Day",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      },
+      {
+        "text": "Day 1",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 bg-slate-900 text-white shadow-sm "
+      },
+      {
+        "text": "",
+        "ariaLabel": "Move day earlier",
+        "title": "Move day earlier",
+        "classes": "w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-200 text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      },
+      {
+        "text": "",
+        "ariaLabel": "Move day later",
+        "title": "Move day later",
+        "classes": "w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-200 text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      },
+      {
+        "text": "",
+        "ariaLabel": "Duplicate day",
+        "title": "Duplicate day",
+        "classes": "w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-200 text-slate-600 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      },
+      {
+        "text": "",
+        "ariaLabel": "Delete day",
+        "title": "Delete day",
+        "classes": "w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-100 text-red-600 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      },
+      {
+        "text": "×",
+        "ariaLabel": "Remove activity Shikara ride",
+        "title": "",
+        "classes": "w-5 h-5 inline-flex items-center justify-center rounded text-slate-400 hover:text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition"
+      },
+      {
+        "text": "Add",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs"
+      },
+      {
+        "text": "Change Photo",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1"
+      },
+      {
+        "text": "Find Photos",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700"
+      },
+      {
+        "text": "Change",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "text-xs text-blue-600 hover:underline font-medium"
+      },
+      {
+        "text": "Remove",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "text-xs text-red-600 hover:text-red-800 font-medium"
+      }
+    ],
+    "inputCount": 9,
+    "inputs": [
+      {
+        "id": "day-0-title",
+        "tagName": "input",
+        "type": "text",
+        "value": "Arrival in Srinagar & Houseboat Check-in",
+        "placeholder": "e.g. Arrival in Srinagar & Dal Lake Sunset",
+        "label": "Day Title *"
+      },
+      {
+        "id": "day-0-desc",
+        "tagName": "textarea",
+        "type": "textarea",
+        "value": "Warm welcome at Srinagar airport followed by Shikara ride.",
+        "placeholder": "Detailed narrative for the day...",
+        "label": "Day Description & Schedule"
+      },
+      {
+        "id": "day-0-stay-hotel",
+        "tagName": "input",
+        "type": "text",
+        "value": "Deluxe Houseboat",
+        "placeholder": "e.g. Hotel Pine Spring",
+        "label": "Stay / Hotel"
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "text",
+        "value": "Srinagar",
+        "placeholder": "e.g. Srinagar",
+        "label": ""
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "checkbox",
+        "value": "on",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "checkbox",
+        "value": "on",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "checkbox",
+        "value": "on",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "day-0-new-act",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Add activity (e.g. Shikara Ride) and press Enter",
+        "label": "Add new activity"
+      },
+      {
+        "id": "day-0-image-query",
+        "tagName": "input",
+        "type": "text",
+        "value": "Srinagar Dal lake houseboat",
+        "placeholder": "e.g. Dal Lake Srinagar shikara",
+        "label": "Image search query"
+      }
+    ],
+    "textCount": 1,
+    "sampleTexts": [
+      "Photo by Tony SebastianSourced from unsplash"
+    ]
+  },
+  {
+    "heading": "Inclusions & Exclusions",
+    "buttonCount": 5,
+    "buttons": [
+      {
+        "text": "",
+        "ariaLabel": "Remove inclusion item 1",
+        "title": "",
+        "classes": "w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      },
+      {
+        "text": "",
+        "ariaLabel": "Remove inclusion item 2",
+        "title": "",
+        "classes": "w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      },
+      {
+        "text": "Add",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "min-h-[36px] px-3.5 py-1.5 bg-emerald-700 text-white rounded-lg text-xs font-medium hover:bg-emerald-800 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 transition"
+      },
+      {
+        "text": "",
+        "ariaLabel": "Remove exclusion item 1",
+        "title": "",
+        "classes": "w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      },
+      {
+        "text": "Add",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "min-h-[36px] px-3.5 py-1.5 bg-red-700 text-white rounded-lg text-xs font-medium hover:bg-red-800 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 transition"
+      }
+    ],
+    "inputCount": 5,
+    "inputs": [
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "text",
+        "value": "Houseboat stay",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "text",
+        "value": "Breakfast & Dinner",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "new-inclusion-input",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Add inclusion...",
+        "label": "Add new inclusion"
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "text",
+        "value": "Flights",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "new-exclusion-input",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Add exclusion...",
+        "label": "Add new exclusion"
+      }
+    ],
+    "textCount": 0,
+    "sampleTexts": []
+  },
+  {
+    "heading": "Commercials, Markup & GST",
+    "buttonCount": 1,
+    "buttons": [
+      {
+        "text": "Sync Net (₹ 1,15,000)",
+        "ariaLabel": null,
+        "title": "Update Supplier Net Cost with Breakup Sum",
+        "classes": "px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-medium transition flex items-center gap-1 shadow-xs"
+      }
+    ],
+    "inputCount": 18,
+    "inputs": [
+      {
+        "id": "pricing-net-cost",
+        "tagName": "input",
+        "type": "number",
+        "value": "115000",
+        "placeholder": "",
+        "label": "Supplier Net Cost (₹) *"
+      },
+      {
+        "id": "pricing-markup-mode",
+        "tagName": "select",
+        "type": "select-one",
+        "value": "percent",
+        "label": "Markup Type"
+      },
+      {
+        "id": "pricing-markup-val",
+        "tagName": "input",
+        "type": "number",
+        "value": "20",
+        "placeholder": "",
+        "label": "Agency Markup"
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "checkbox",
+        "value": "on",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "breakup-flight-amount",
+        "tagName": "input",
+        "type": "number",
+        "value": "35000",
+        "placeholder": "0 (Included in Total)",
+        "label": "Itemized Amount (₹)"
+      },
+      {
+        "id": "breakup-flight-note",
+        "tagName": "input",
+        "type": "text",
+        "value": "Return economy airfare with 20kg baggage",
+        "placeholder": "e.g. Return flights with 20kg check-in baggage",
+        "label": "Specifications / Note"
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "checkbox",
+        "value": "on",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "breakup-hotel-amount",
+        "tagName": "input",
+        "type": "number",
+        "value": "45000",
+        "placeholder": "0 (Included in Total)",
+        "label": "Itemized Amount (₹)"
+      },
+      {
+        "id": "breakup-hotel-note",
+        "tagName": "input",
+        "type": "text",
+        "value": "4-star luxury stays with daily breakfast",
+        "placeholder": "e.g. 4-star boutique hotel + private pool villa",
+        "label": "Specifications / Note"
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "checkbox",
+        "value": "on",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "breakup-landPart-amount",
+        "tagName": "input",
+        "type": "number",
+        "value": "30000",
+        "placeholder": "0 (Included in Total)",
+        "label": "Itemized Amount (₹)"
+      },
+      {
+        "id": "breakup-landPart-note",
+        "tagName": "input",
+        "type": "text",
+        "value": "All private AC transfers, sightseeing & toll taxes",
+        "placeholder": "e.g. Private AC cab, airport transfers & excursions",
+        "label": "Specifications / Note"
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "checkbox",
+        "value": "on",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "breakup-visa-amount",
+        "tagName": "input",
+        "type": "number",
+        "value": "5000",
+        "placeholder": "0 (Included in Total)",
+        "label": "Itemized Amount (₹)"
+      },
+      {
+        "id": "breakup-visa-note",
+        "tagName": "input",
+        "type": "text",
+        "value": "Tourist e-Visa fee & consular documentation support",
+        "placeholder": "e.g. Tourist e-Visa assistance & consular fee",
+        "label": "Specifications / Note"
+      },
+      {
+        "id": "pricing-basis",
+        "tagName": "select",
+        "type": "select-one",
+        "value": "per_person_twin_sharing",
+        "label": "Pricing Basis"
+      },
+      {
+        "id": "pricing-gst-mode",
+        "tagName": "select",
+        "type": "select-one",
+        "value": "inclusive",
+        "label": "GST Display Mode"
+      },
+      {
+        "id": "pricing-validity-days",
+        "tagName": "input",
+        "type": "number",
+        "value": "7",
+        "placeholder": "",
+        "label": "Quote Validity (Days)"
+      }
+    ],
+    "textCount": 5,
+    "sampleTexts": [
+      "Review supplier net rate",
+      "Specify itemized amounts or inclusion status for: Flight, Hotel, Land Part, and Visa.",
+      "Luxury stays & resorts",
+      "Sightseeing & transfers",
+      "Entry visa & processing"
+    ]
+  },
+  {
+    "heading": "Payment Schedule & Cancellation Terms",
+    "buttonCount": 4,
+    "buttons": [
+      {
+        "text": "",
+        "ariaLabel": "Remove payment term 1",
+        "title": "",
+        "classes": "w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      },
+      {
+        "text": "Add",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "min-h-[36px] px-3.5 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 transition"
+      },
+      {
+        "text": "",
+        "ariaLabel": "Remove cancellation slab 1",
+        "title": "",
+        "classes": "w-8 h-8 inline-flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+      },
+      {
+        "text": "Add Slab",
+        "ariaLabel": null,
+        "title": "",
+        "classes": "min-h-[36px] px-3.5 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 transition"
+      }
+    ],
+    "inputCount": 6,
+    "inputs": [
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "text",
+        "value": "25% advance",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "new-payment-term",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "e.g. 25% deposit to confirm booking",
+        "label": "Add payment milestone"
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "text",
+        "value": "> 30 days",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "",
+        "tagName": "input",
+        "type": "text",
+        "value": "10%",
+        "placeholder": "",
+        "label": ""
+      },
+      {
+        "id": "new-slab-window",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Window (e.g. > 30 days prior)",
+        "label": "Cancellation window"
+      },
+      {
+        "id": "new-slab-charge",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Charge (e.g. 10% non-refundable)",
+        "label": "Cancellation charge"
+      }
+    ],
+    "textCount": 0,
+    "sampleTexts": []
+  },
+  {
+    "heading": "Sales Specialist & Agency Info",
+    "buttonCount": 0,
+    "buttons": [],
+    "inputCount": 3,
+    "inputs": [
+      {
+        "id": "contact-name",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "e.g. Rahul Sharma",
+        "label": "Trip Specialist Name"
+      },
+      {
+        "id": "contact-phone",
+        "tagName": "input",
+        "type": "text",
+        "value": "",
+        "placeholder": "e.g. +91 98765 12345",
+        "label": "Direct Phone"
+      },
+      {
+        "id": "contact-email",
+        "tagName": "input",
+        "type": "email",
+        "value": "",
+        "placeholder": "e.g. rahul@trippygo.com",
+        "label": "Official Email"
+      }
+    ],
+    "textCount": 1,
+    "sampleTexts": [
+      "Brand: TrippyGo | GSTIN: 27AABCT1234D1Z5Support Desk: +91 9941000075 | harkiran@trippygo.in"
+    ]
+  }
+]

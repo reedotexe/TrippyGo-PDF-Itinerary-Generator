@@ -214,3 +214,21 @@ export function calculatePricingBreakdown(
     minMarginFloor: minFloor,
   };
 }
+
+/**
+ * Compute the sum of the 4 package price breakup items (Flight, Hotel, Land Part, Visa) in integer paise.
+ */
+export function computeBreakupTotalPaise(breakup?: {
+  flight?: { amountPaise?: number };
+  hotel?: { amountPaise?: number };
+  landPart?: { amountPaise?: number };
+  visa?: { amountPaise?: number };
+}): number {
+  if (!breakup) return 0;
+  return (
+    (breakup.flight?.amountPaise || 0) +
+    (breakup.hotel?.amountPaise || 0) +
+    (breakup.landPart?.amountPaise || 0) +
+    (breakup.visa?.amountPaise || 0)
+  );
+}

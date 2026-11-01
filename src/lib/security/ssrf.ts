@@ -65,18 +65,20 @@ export function isRequestAllowedInRenderer(requestUrl: string, targetPrintUrl: s
       return true;
     }
 
-    // 2. Allow local Next.js static asset bundles from the same origin as targetPrintUrl
+    // 2. Allow local Next.js static asset bundles and public brand/static files from the same origin as targetPrintUrl
     try {
       const targetParsed = new URL(targetPrintUrl);
-      if (
-        parsed.origin === targetParsed.origin &&
-        (parsed.pathname.startsWith("/_next/") ||
+      if (parsed.origin === targetParsed.origin) {
+        if (
+          parsed.pathname.startsWith("/_next/") ||
           parsed.pathname.startsWith("/static/") ||
-          parsed.pathname.endsWith(".css") ||
-          parsed.pathname.endsWith(".woff2") ||
-          parsed.pathname.endsWith(".svg"))
-      ) {
-        return true;
+          parsed.pathname.startsWith("/brand/") ||
+          parsed.pathname.startsWith("/images/") ||
+          parsed.pathname.startsWith("/api/storage/") ||
+          /\.(css|woff2?|ttf|eot|svg|png|jpe?g|webp|gif|ico)$/i.test(parsed.pathname)
+        ) {
+          return true;
+        }
       }
     } catch {
       // ignore parsing error
