@@ -1,53 +1,65 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { useSession } from "@/lib/auth/client";
+import { Button } from "@/components/ui/button";
 import { WorkbenchHeader } from "@/components/dashboard/WorkbenchHeader";
 import { WorkbenchMetrics } from "@/components/dashboard/WorkbenchMetrics";
 import { ItineraryTable } from "@/components/dashboard/ItineraryTable";
 import { WorkbenchEmptyState } from "@/components/dashboard/WorkbenchEmptyState";
 import { NewItineraryModal } from "@/components/dashboard/NewItineraryModal";
 import { ItinerarySummary } from "@/lib/db/itineraries";
+import { KASHMIR_SAMPLE_TOUR } from "@/lib/constants/sample-tour";
+
+const PAGE_SIZE = 20;
 
 export default function HomePage() {
   const router = useRouter();
+  const { data: sessionData } = useSession();
+  const isAdmin = sessionData?.user?.role === "admin";
+
   const [itineraries, setItineraries] = useState<ItinerarySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch proposals list
-  useEffect(() => {
-    let ignore = false;
-    fetch("/api/itineraries")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load itineraries");
-        return res.json();
-      })
-      .then((data) => {
-        if (!ignore) {
-          setItineraries(data.itineraries || []);
-        }
-      })
-      .catch((err) => {
-        console.error("Error loading itineraries:", err);
-      })
-      .finally(() => {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
+  const loadItineraries = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const res = await fetch("/api/itineraries");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Failed to load proposals (status ${res.status})`);
+      }
+      const data = await res.json();
+      setItineraries(data.itineraries || []);
+    } catch (err: unknown) {
+      console.error("Error loading itineraries:", err);
+      setFetchError(
+        (err as Error)?.message ||
+          "Failed to load proposals. Please check your network and try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadItineraries();
+  }, [loadItineraries]);
 
   // Global Keyboard Shortcuts (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -60,6 +72,11 @@ export default function HomePage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Reset page on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   // Filtered Itineraries
   const filteredItineraries = useMemo(() => {
@@ -81,6 +98,13 @@ export default function HomePage() {
 
     return result;
   }, [itineraries, searchQuery, statusFilter]);
+
+  // Paginated Itineraries
+  const totalPages = Math.max(1, Math.ceil(filteredItineraries.length / PAGE_SIZE));
+  const paginatedItineraries = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredItineraries.slice(start, start + PAGE_SIZE);
+  }, [filteredItineraries, currentPage]);
 
   // Computed Metrics
   const metrics = useMemo(() => {
@@ -170,7 +194,35 @@ export default function HomePage() {
     }
   };
 
-  // Delete Proposal
+  // Duplicate Proposal
+  const handleDuplicate = async (id: string) => {
+    setIsProcessing(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`/api/itineraries/${id}`);
+      if (!res.ok) throw new Error("Failed to load itinerary to duplicate");
+      const json = await res.json();
+      const origData = json.itinerary;
+      const duplicatedData = {
+        ...origData,
+        title: `Copy of ${origData.title || "Itinerary"}`,
+      };
+      const createRes = await fetch("/api/itineraries", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ data: duplicatedData }),
+      });
+      if (!createRes.ok) throw new Error("Failed to duplicate itinerary");
+      const created = await createRes.json();
+      router.push(`/itineraries/${created.id}/edit`);
+    } catch (err) {
+      console.error("Duplicate error:", err);
+      setErrorMsg((err as Error).message || "Failed to duplicate itinerary.");
+      setIsProcessing(false);
+    }
+  };
+
+  // Soft Delete Proposal
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
@@ -187,59 +239,11 @@ export default function HomePage() {
 
   // Sample Kashmir Quick Load
   const handleLoadKashmirSample = () => {
-    const kashmirText = `SUPPLIER: Royal Kashmir Holidays
-Package: Kashmir Paradise Tour
-Duration: 6 Nights / 7 Days
-
-DAY 1: ARRIVAL SRINAGAR - LOCAL SIGHTSEEING
-Meet & greet at Srinagar airport. Transfer to luxury houseboat at Dal Lake.
-Afternoon Shikara ride visiting Floating Gardens and Char Chinar.
-Dinner & overnight stay at Houseboat (Dal Lake).
-
-DAY 2: SRINAGAR TO SONAMARG DAY EXCURSION
-Drive to Sonamarg (Meadow of Gold). Enjoy Thajiwas Glacier pony ride.
-Dinner & overnight stay at Hotel Grand Boulevard, Srinagar.
-
-DAY 3: SRINAGAR - GULMARG
-Board Gulmarg Gondola Phase 1 & 2 up to Apharwat Peak.
-Dinner & overnight stay at Hotel Pine Spring, Gulmarg.
-
-DAY 4: GULMARG TO PAHALGAM
-Drive to Pahalgam via Pampore saffron fields.
-Dinner & overnight stay at Hotel Heevan, Pahalgam.
-
-DAY 5: PAHALGAM VALLEY SIGHTSEEING
-Visit Betaab Valley, Aru Valley, and Chandanwari.
-Dinner & overnight stay at Hotel Heevan, Pahalgam.
-
-DAY 6: PAHALGAM TO SRINAGAR
-Mughal Gardens: Nishat Bagh and Shalimar Bagh.
-Dinner & overnight stay at Hotel Grand Boulevard, Srinagar.
-
-DAY 7: DEPARTURE SRINAGAR AIRPORT
-Breakfast and transfer to Srinagar Airport.
-
-INCLUSIONS:
-- 01 Night Houseboat Srinagar
-- 02 Nights Grand Boulevard Srinagar
-- 01 Night Pine Spring Gulmarg
-- 02 Nights Heevan Pahalgam
-- Daily Breakfast and Dinner (MAP plan)
-- All transfers by private Innova Crysta
-
-EXCLUSIONS:
-- Airfare
-- Gondola tickets Phase 1 & 2
-- Personal expenses
-
-NET SUPPLIER PRICE:
-INR 52,000/- Total for couple net.`;
-
-    handleExtract(kashmirText);
+    handleExtract(KASHMIR_SAMPLE_TOUR);
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans selection:bg-[#c92229] selection:text-white">
+    <div className="app-shell min-h-screen bg-background text-foreground font-sans">
       {/* Top Workbench Navigation */}
       <WorkbenchHeader
         searchQuery={searchQuery}
@@ -260,11 +264,36 @@ INR 52,000/- Total for couple net.`;
         totalPipelinePaise={metrics.totalPipelinePaise}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
+        isAdmin={isAdmin}
       />
 
       {/* Main Workspace Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {itineraries.length === 0 && !isLoading ? (
+        {fetchError && !isLoading ? (
+          <div className="bg-card rounded-lg border border-destructive/20 p-8 sm:p-12 text-center max-w-md mx-auto my-8 shadow-xs space-y-4">
+            <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+              <AlertCircle className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-foreground">
+                Unable to load proposals
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {fetchError}
+              </p>
+            </div>
+            <div>
+              <Button
+                variant="outline"
+                onClick={loadItineraries}
+                className="gap-2"
+              >
+                <RefreshCw className="size-3.5" />
+                Retry
+              </Button>
+            </div>
+          </div>
+        ) : itineraries.length === 0 && !isLoading ? (
           <WorkbenchEmptyState
             isSearchEmpty={false}
             onClearSearch={() => setSearchQuery("")}
@@ -287,21 +316,21 @@ INR 52,000/- Total for couple net.`;
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#091c3e]">
-                  Active Proposals & Client Itineraries
-                </h1>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Showing {filteredItineraries.length} of {itineraries.length} proposals
-                </p>
-              </div>
+              <h1 className="text-xl font-semibold text-foreground tracking-tight">
+                Proposals
+              </h1>
             </div>
 
             <ItineraryTable
-              itineraries={filteredItineraries}
+              itineraries={paginatedItineraries}
               isLoading={isLoading}
               onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
               isDeletingId={deletingId}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredItineraries.length}
+              onPageChange={setCurrentPage}
             />
           </div>
         )}
