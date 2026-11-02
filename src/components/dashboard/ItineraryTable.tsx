@@ -1,32 +1,70 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileText,
-  Calendar,
-  MapPin,
-  ExternalLink,
+  MoreHorizontal,
+  Copy,
   Trash2,
-  Edit3,
-  Clock,
-  User,
-  CheckCircle2,
 } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { ItinerarySummary } from "@/lib/db/itineraries";
 
-function formatDate(isoString?: string): string {
-  if (!isoString) return "—";
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return isoString;
+function formatDestinationsAndDates(item: ItinerarySummary): string {
+  const parts: string[] = [];
+
+  // Destinations
+  if (item.destinations && item.destinations.length > 0) {
+    parts.push(item.destinations.join(", "));
+  } else {
+    parts.push("Flexible destination");
   }
+
+  // Start Date (e.g. "5 Nov")
+  if (item.startDate) {
+    try {
+      const d = new Date(item.startDate);
+      if (!isNaN(d.getTime())) {
+        const formattedDate = d.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+        });
+        parts.push(formattedDate);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // Duration
+  parts.push(`${item.nightsCount}N/${item.daysCount}D`);
+
+  return parts.join(" · ");
 }
 
 function formatRelativeTime(isoString: string): string {
@@ -47,297 +85,393 @@ interface ItineraryTableProps {
   itineraries: ItinerarySummary[];
   isLoading: boolean;
   onDelete: (id: string) => Promise<void>;
+  onDuplicate: (id: string) => Promise<void>;
   isDeletingId: string | null;
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
 }
 
 export function ItineraryTable({
   itineraries,
   isLoading,
   onDelete,
+  onDuplicate,
   isDeletingId,
+  currentPage,
+  totalPages,
+  totalItems,
+  onPageChange,
 }: ItineraryTableProps) {
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const router = useRouter();
+  const [deleteTarget, setDeleteTarget] = useState<ItinerarySummary | null>(null);
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-6 space-y-4">
+      <div className="bg-card rounded-lg border border-border overflow-hidden p-6 space-y-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="animate-pulse flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
+          <div
+            key={i}
+            className="animate-pulse flex items-center justify-between py-3 border-b border-border/50 last:border-0"
+          >
             <div className="space-y-2 flex-1">
-              <div className="h-4 bg-slate-200 rounded w-1/3" />
-              <div className="h-3 bg-slate-100 rounded w-1/4" />
+              <div className="h-4 bg-muted rounded w-1/3" />
+              <div className="h-3 bg-muted/60 rounded w-1/4" />
             </div>
-            <div className="h-4 bg-slate-100 rounded w-20 mx-4 hidden sm:block" />
-            <div className="h-8 bg-slate-200 rounded w-24" />
+            <div className="h-4 bg-muted/60 rounded w-20 mx-4 hidden sm:block" />
+            <div className="h-8 bg-muted rounded w-24" />
           </div>
         ))}
       </div>
     );
   }
 
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * 20 + 1;
+  const endItem = Math.min(currentPage * 20, totalItems);
+
   return (
     <div className="space-y-4">
       {/* Desktop Table View */}
-      <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-              <th className="py-3.5 px-6">Proposal & Client</th>
-              <th className="py-3.5 px-4">Destinations & Duration</th>
-              <th className="py-3.5 px-4">Selling Price</th>
-              <th className="py-3.5 px-4">Status</th>
-              <th className="py-3.5 px-4">Updated</th>
-              <th className="py-3.5 px-6 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-sm">
+      <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden shadow-xs">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="py-3 px-3 sm:px-4 font-semibold text-xs text-muted-foreground">
+                Proposal & client
+              </TableHead>
+              <TableHead className="py-3 px-2 sm:px-4 font-semibold text-xs text-muted-foreground">
+                Destinations & dates
+              </TableHead>
+              <TableHead className="py-3 px-2 sm:px-4 font-semibold text-xs text-muted-foreground">
+                Price
+              </TableHead>
+              <TableHead className="py-3 px-2 sm:px-4 font-semibold text-xs text-muted-foreground">
+                Status
+              </TableHead>
+              <TableHead className="py-3 px-2 sm:px-4 font-semibold text-xs text-muted-foreground hidden lg:table-cell">
+                Updated
+              </TableHead>
+              <TableHead className="py-3 px-2 sm:px-4 text-right font-semibold text-xs text-muted-foreground w-20">
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {itineraries.map((item) => {
-              const isDeleting = isDeletingId === item.id;
-              const isConfirming = confirmDeleteId === item.id;
+              const priceDisplay =
+                item.sellingPricePaise > 0 ? item.sellingPriceFormatted : "—";
 
               return (
-                <tr
+                <TableRow
                   key={item.id}
-                  className="hover:bg-slate-50/80 transition group"
+                  onClick={() => router.push(`/itineraries/${item.id}/edit`)}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                 >
-                  {/* Proposal Title & Client */}
-                  <td className="py-4 px-6">
-                    <Link
-                      href={`/itineraries/${item.id}/edit`}
-                      className="font-bold text-slate-900 group-hover:text-[#091c3e] hover:underline flex items-baseline gap-2"
-                    >
-                      <span className="truncate max-w-xs">{item.title}</span>
-                    </Link>
-                    {item.guestName ? (
-                      <div className="text-xs text-slate-600 flex items-center gap-1.5 mt-0.5">
-                        <User className="w-3 h-3 text-slate-500 shrink-0" />
-                        <span>Client: {item.guestName}</span>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-500 mt-0.5">Unassigned Client</div>
-                    )}
-                  </td>
+                  {/* Proposal & Client */}
+                  <TableCell className="py-3.5 px-3 sm:px-4">
+                    <div className="font-semibold text-foreground hover:underline truncate max-w-[180px] lg:max-w-xs">
+                      {item.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[180px] lg:max-w-xs">
+                      {item.guestName ? `Client: ${item.guestName}` : "—"}
+                    </div>
+                  </TableCell>
 
-                  {/* Destinations & Duration */}
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                      <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate max-w-[200px]">
-                        {item.destinations.length > 0
-                          ? item.destinations.join(", ")
-                          : "Flexible Destination"}
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-600 flex items-center gap-1.5 mt-0.5">
-                      <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
-                      <span>
-                        {item.nightsCount}N / {item.daysCount}D
-                        {item.startDate && ` • Starts ${formatDate(item.startDate)}`}
-                      </span>
-                    </div>
-                  </td>
+                  {/* Destinations & Dates (e.g. Phuket, Krabi · 5 Nov · 7N/8D) */}
+                  <TableCell className="py-3.5 px-2 sm:px-4">
+                    <span className="text-xs text-foreground truncate block max-w-[170px] lg:max-w-sm">
+                      {formatDestinationsAndDates(item)}
+                    </span>
+                  </TableCell>
 
                   {/* Price */}
-                  <td className="py-4 px-4 font-semibold text-slate-900">
-                    {item.sellingPricePaise > 0 ? (
-                      <span className="text-sm font-bold text-[#091c3e]">
-                        {item.sellingPriceFormatted}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-500">Unpriced Draft</span>
-                    )}
-                  </td>
+                  <TableCell className="py-3.5 px-2 sm:px-4">
+                    <span className="text-xs font-semibold text-foreground">
+                      {priceDisplay}
+                    </span>
+                  </TableCell>
 
                   {/* Status */}
-                  <td className="py-4 px-4">
+                  <TableCell className="py-3.5 px-2 sm:px-4">
                     {item.status === "generated" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3" />
-                        PDF Ready
-                      </span>
+                      <Badge variant="success">
+                        PDF ready
+                      </Badge>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                        <Clock className="w-3 h-3" />
+                      <Badge variant="secondary" className="text-muted-foreground">
                         Draft
-                      </span>
+                      </Badge>
                     )}
-                  </td>
+                  </TableCell>
 
-                  {/* Last Updated */}
-                  <td className="py-4 px-4 text-xs text-slate-600">
+                  {/* Updated */}
+                  <TableCell className="py-3.5 px-2 sm:px-4 text-xs text-muted-foreground hidden lg:table-cell">
                     {formatRelativeTime(item.updatedAt)}
-                  </td>
+                  </TableCell>
 
                   {/* Actions */}
-                  <td className="py-4 px-6 text-right">
-                    <div className="inline-flex items-center gap-1.5 justify-end">
-                      <Link
-                        href={`/itineraries/${item.id}/edit`}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-[#091c3e] focus-visible:outline-none"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Edit</span>
-                      </Link>
-
+                  <TableCell className="py-3.5 px-2 sm:px-4 text-right">
+                    <div
+                      className="inline-flex items-center gap-1 justify-end"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {item.hasPdf && (
-                        <Link
-                          href={`/print/${item.id}?preview=1`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-[#091c3e] focus-visible:outline-none"
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() =>
+                            window.open(
+                              item.lastPdfUrl || `/api/itineraries/${item.id}/pdf`,
+                              "_blank"
+                            )
+                          }
                           title="View Client PDF"
+                          aria-label="View Client PDF"
                         >
-                          <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                          <ExternalLink className="w-3 h-3 text-slate-400" />
-                        </Link>
+                          <FileText className="size-4 text-success" />
+                        </Button>
                       )}
 
-                      {isConfirming ? (
-                        <div className="inline-flex items-center gap-1 bg-red-50 p-1 rounded-lg border border-red-200">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onDelete(item.id);
-                              setConfirmDeleteId(null);
-                            }}
-                            disabled={isDeleting}
-                            className="px-2 py-0.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded transition"
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="More actions"
+                            >
+                              <MoreHorizontal className="size-4 text-muted-foreground" />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem
+                            onClick={() => onDuplicate(item.id)}
+                            className="cursor-pointer text-xs"
                           >
+                            <Copy className="size-3.5 mr-2 text-muted-foreground" />
+                            Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeleteTarget(item)}
+                            variant="destructive"
+                            className="cursor-pointer text-xs"
+                          >
+                            <Trash2 className="size-3.5 mr-2" />
                             Delete
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="px-1.5 py-0.5 text-xs text-slate-600 hover:text-slate-900"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(item.id)}
-                          disabled={isDeleting}
-                          aria-label={`Delete itinerary ${item.title}`}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
-                          title="Delete itinerary"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
+
+        {/* Desktop Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3 sm:px-6">
+            <div className="text-xs text-muted-foreground">
+              Showing {startItem}–{endItem} of {totalItems} proposals
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground mr-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile Stacked Card View */}
       <div className="md:hidden space-y-3">
         {itineraries.map((item) => {
-          const isDeleting = isDeletingId === item.id;
-          const isConfirming = confirmDeleteId === item.id;
+          const priceDisplay =
+            item.sellingPricePaise > 0 ? item.sellingPriceFormatted : "—";
 
           return (
             <div
               key={item.id}
-              className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3"
+              onClick={() => router.push(`/itineraries/${item.id}/edit`)}
+              className="bg-card p-4 rounded-lg border border-border shadow-xs space-y-3 cursor-pointer hover:bg-muted/30 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <Link
-                    href={`/itineraries/${item.id}/edit`}
-                    className="font-bold text-slate-900 text-sm hover:underline block"
-                  >
+                  <div className="font-semibold text-foreground text-sm hover:underline">
                     {item.title}
-                  </Link>
-                  <div className="text-xs text-slate-600 mt-0.5">
-                    {item.guestName ? `Client: ${item.guestName}` : "Unassigned Client"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {item.guestName ? `Client: ${item.guestName}` : "—"}
                   </div>
                 </div>
 
                 {item.status === "generated" ? (
-                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    PDF Ready
-                  </span>
+                  <Badge variant="success" className="shrink-0">
+                    PDF ready
+                  </Badge>
                 ) : (
-                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  <Badge variant="secondary" className="text-muted-foreground shrink-0">
                     Draft
-                  </span>
+                  </Badge>
                 )}
               </div>
 
-              <div className="text-xs text-slate-700 space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span>
-                    {item.destinations.length > 0
-                      ? item.destinations.join(", ")
-                      : "Flexible Destination"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-slate-200/60">
-                  <span>
-                    {item.nightsCount}N / {item.daysCount}D
-                  </span>
-                  <span className="font-bold text-slate-900">
-                    {item.sellingPricePaise > 0 ? item.sellingPriceFormatted : "Unpriced"}
-                  </span>
+              <div className="text-xs text-foreground bg-muted/40 p-2.5 rounded-md border border-border/50">
+                <div className="truncate">{formatDestinationsAndDates(item)}</div>
+                <div className="flex items-center justify-between pt-1 mt-1 border-t border-border/50">
+                  <span className="text-muted-foreground">Price</span>
+                  <span className="font-semibold text-foreground">{priceDisplay}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-slate-500">
+                <span className="text-[11px] text-muted-foreground">
                   Updated {formatRelativeTime(item.updatedAt)}
                 </span>
 
-                <div className="flex items-center gap-2">
-                  {isConfirming ? (
-                    <div className="inline-flex items-center gap-1 bg-red-50 p-1 rounded-md border border-red-200">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onDelete(item.id);
-                          setConfirmDeleteId(null);
-                        }}
-                        disabled={isDeleting}
-                        className="px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="px-1 text-xs text-slate-600"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteId(item.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 rounded"
-                      title="Delete"
+                <div
+                  className="flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {item.hasPdf && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        window.open(
+                          item.lastPdfUrl || `/api/itineraries/${item.id}/pdf`,
+                          "_blank"
+                        )
+                      }
+                      title="View Client PDF"
+                      aria-label="View Client PDF"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <FileText className="size-4 text-success" />
+                    </Button>
                   )}
 
-                  <Link
-                    href={`/itineraries/${item.id}/edit`}
-                    className="px-3 py-1.5 bg-[#091c3e] text-white text-xs font-bold rounded-lg"
-                  >
-                    Edit Itinerary
-                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="More actions"
+                        >
+                          <MoreHorizontal className="size-4 text-muted-foreground" />
+                        </Button>
+                      }
+                    />
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem
+                        onClick={() => onDuplicate(item.id)}
+                        className="cursor-pointer text-xs"
+                      >
+                        <Copy className="size-3.5 mr-2 text-muted-foreground" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setDeleteTarget(item)}
+                        variant="destructive"
+                        className="cursor-pointer text-xs"
+                      >
+                        <Trash2 className="size-3.5 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
           );
         })}
+
+        {/* Mobile Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border pt-3">
+            <span className="text-xs text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Soft Delete Confirmation Modal */}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move itinerary to trash?</DialogTitle>
+            <DialogDescription>
+              &ldquo;{deleteTarget?.title || "This itinerary"}&rdquo; will be moved to
+              trash. You can restore it later from Trash.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isDeletingId === deleteTarget?.id}
+              onClick={async () => {
+                if (deleteTarget) {
+                  await onDelete(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
