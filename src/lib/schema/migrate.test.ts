@@ -24,7 +24,8 @@ const v0Doc = {
 };
 
 const migratedV1 = migrateItinerarySchema(v0Doc);
-assert.equal(migratedV1.schemaVersion, 1, "schemaVersion must be upgraded to 1");
+assert.equal(migratedV1.schemaVersion, 2, "schemaVersion must be upgraded to 2");
+assert.ok(migratedV1.ownership, "ownership metadata object must exist on v2 documents");
 assert.equal(migratedV1.package.title, "Kashmir Winter Odyssey");
 assert.equal(migratedV1.package.nights, 0, "1-day tour has 0 nights");
 assert.equal(migratedV1.package.days, 1, "Days matches 1 day from input array");
@@ -36,7 +37,7 @@ assert.deepEqual(migratedV1.pricing.markup, { type: "percent", value: 15 });
 assert.ok(Array.isArray(migratedV1.inclusions));
 assert.ok(Array.isArray(migratedV1.exclusions));
 assert.ok(Array.isArray(migratedV1.terms.cancellation));
-console.log("  -> Unversioned v0 document upgraded to v1 cleanly.");
+console.log("  -> Unversioned v0 document upgraded to v2 cleanly.");
 
 // -------------------------------------------------------------
 // 2. Legacy Rupee Conversion (netAmount -> netAmountPaise)
@@ -94,14 +95,14 @@ assert.equal(migratedNoDays.days[0].title, "Day 1 Arrival");
 console.log("  -> Missing days normalized with valid Day structure.");
 
 // -------------------------------------------------------------
-// 5. Idempotency on Already-V1 Documents
+// 5. Idempotency on Already-V2 Documents
 // -------------------------------------------------------------
-console.log("[Test 5] Idempotency when document is already schemaVersion: 1...");
-const alreadyV1 = { ...migratedV1 };
-const idempotentRun = migrateItinerarySchema(alreadyV1);
-assert.equal(idempotentRun.schemaVersion, 1);
-assert.deepEqual(idempotentRun, alreadyV1);
-console.log("  -> Already v1 documents pass through idempotently.");
+console.log("[Test 5] Idempotency when document is already schemaVersion: 2...");
+const alreadyV2 = { ...migratedV1 };
+const idempotentRun = migrateItinerarySchema(alreadyV2);
+assert.equal(idempotentRun.schemaVersion, 2);
+assert.deepEqual(idempotentRun, alreadyV2);
+console.log("  -> Already v2 documents pass through idempotently.");
 
 // -------------------------------------------------------------
 // 6. Strict Zod Schema Conformance
@@ -276,5 +277,36 @@ assert.equal(clientTotalOnlyView.pricing.pricingType, "total_only");
 assert.equal(clientTotalOnlyView.pricing.finalPriceRupees, 125000);
 assert.equal(clientTotalOnlyView.pricing.items.length, 0, "Total only view must have 0 breakup items");
 console.log("  -> 10.C Total Only: Lump sum ₹1,25,000, exactly 0 breakup items, zero markup.");
+
+// -------------------------------------------------------------
+// 11. Validating Schema Version 2 Upgrade (v0 -> v2, v1 -> v2)
+// -------------------------------------------------------------
+console.log("[Test 11] Validating Schema Version 2 & Ownership Metadata...");
+const explicitV1Doc = {
+  ...migratedV1,
+  schemaVersion: 1,
+};
+delete (explicitV1Doc as any).ownership;
+
+const upgradedV2 = migrateItinerarySchema(explicitV1Doc);
+assert.equal(upgradedV2.schemaVersion, 2, "v1 document must be upgraded to schemaVersion 2");
+assert.deepEqual(upgradedV2.ownership, {}, "v1 document upgraded to v2 must initialize empty ownership object");
+
+// v2 with existing ownership metadata preserved
+const v2WithOwnership = {
+  ...migratedV1,
+  schemaVersion: 2,
+  ownership: {
+    ownerId: "usr_agent_007",
+    ownerName: "Agent Bond",
+    createdBy: "usr_admin_001",
+  },
+};
+const validatedV2 = migrateItinerarySchema(v2WithOwnership);
+assert.equal(validatedV2.schemaVersion, 2);
+assert.equal(validatedV2.ownership?.ownerId, "usr_agent_007");
+assert.equal(validatedV2.ownership?.ownerName, "Agent Bond");
+assert.equal(validatedV2.ownership?.createdBy, "usr_admin_001");
+console.log("  -> v0->v2 and v1->v2 migrations and ownership metadata preservation verified 100%.");
 
 console.log("\nPASS: ALL SCHEMA MIGRATION TESTS PASSED 100%!\n");

@@ -1,0 +1,30 @@
+# Dependencies and package manager caches
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js build output and dev cache
+.next
+out
+
+# Version control
+.git
+.gitignore
+
+# Environment files
+.env*.local
+
+# Local fallback data and uploads
+.data
+.uploads
+
+# Test suites, documentation, and references
+tests
+docs
+*.md
+
+# Operating System metadata
+.DS_Store
+Thumbs.db

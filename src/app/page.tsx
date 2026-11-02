@@ -270,13 +270,14 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {fetchError && !isLoading ? (
           <div className="bg-card rounded-lg border border-destructive/20 p-8 sm:p-12 text-center max-w-md mx-auto my-8 shadow-xs space-y-4">
+            <h1 className="sr-only">Proposals</h1>
             <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
               <AlertCircle className="size-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-foreground">
+              <h2 className="text-base font-semibold text-foreground">
                 Unable to load proposals
-              </h3>
+              </h2>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
                 {fetchError}
               </p>
@@ -293,13 +294,16 @@ export default function HomePage() {
             </div>
           </div>
         ) : itineraries.length === 0 && !isLoading ? (
-          <WorkbenchEmptyState
-            isSearchEmpty={false}
-            onClearSearch={() => setSearchQuery("")}
-            onOpenNewModal={() => setIsNewModalOpen(true)}
-            onLoadSample={handleLoadKashmirSample}
-            isProcessing={isProcessing}
-          />
+          <>
+            <h1 className="sr-only">Proposals</h1>
+            <WorkbenchEmptyState
+              isSearchEmpty={false}
+              onClearSearch={() => setSearchQuery("")}
+              onOpenNewModal={() => setIsNewModalOpen(true)}
+              onLoadSample={handleLoadKashmirSample}
+              isProcessing={isProcessing}
+            />
+          </>
         ) : (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -349,6 +353,7 @@ export default function HomePage() {
                 totalPages={totalPages}
                 totalItems={filteredItineraries.length}
                 onPageChange={setCurrentPage}
+                isAdmin={isAdmin}
               />
             )}
           </div>

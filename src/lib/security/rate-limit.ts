@@ -23,7 +23,9 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-export function getClientIdentifier(req: NextRequest | Request): string {
+export function getClientIdentifier(req: NextRequest | Request, userIdFallback?: string): string {
+  // 0. Prefer explicit user ID
+  if (userIdFallback) return "user_" + userIdFallback;
   // 1. Check user id from session header (if authenticated)
   const userId = req.headers.get("x-user-id");
   if (userId) return `user_${userId}`;

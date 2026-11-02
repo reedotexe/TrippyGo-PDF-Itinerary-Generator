@@ -6,7 +6,9 @@ import { migrateItinerarySchema } from "../schema/migrate";
 import { getPresignedDownloadUrl } from "../storage/s3";
 import { computeSellingPricePaise, formatInr } from "../pricing";
 import { db, itineraries, itineraryVersions } from "@/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull, isNotNull } from "drizzle-orm";
+import { recordAuditEvent } from "@/lib/audit/logger";
+import { AuthenticatedUser } from "@/lib/auth/guard";
 
 const localDataDir = path.join(process.cwd(), ".data");
 const localDataFile = path.join(localDataDir, "itineraries.json");
@@ -30,6 +32,11 @@ interface LocalStore {
       title: string;
       status: string;
       currentData: Itinerary;
+      ownerId?: string | null;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+      deletedAt?: string | null;
+      deletedBy?: string | null;
       updatedAt: string;
       createdAt: string;
     }
@@ -37,16 +44,55 @@ interface LocalStore {
   versions: Record<string, Array<VersionSummary>>;
 }
 
+let storeCache: { mtimeMs: number; store: LocalStore } | null = null;
+
 function getLocalStore(): LocalStore {
   if (!fs.existsSync(localDataDir)) {
     fs.mkdirSync(localDataDir, { recursive: true });
   }
   if (!fs.existsSync(localDataFile)) {
-    fs.writeFileSync(localDataFile, JSON.stringify({ itineraries: {}, versions: {} }, null, 2), "utf8");
+    const initial: LocalStore = { itineraries: {}, versions: {} };
+    saveLocalStore(initial);
+    return initial;
   }
+
   try {
-    return JSON.parse(fs.readFileSync(localDataFile, "utf8"));
-  } catch {
+    const stat = fs.statSync(localDataFile);
+    if (storeCache && storeCache.mtimeMs === stat.mtimeMs) {
+      return storeCache.store;
+    }
+
+    let raw = "";
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        raw = fs.readFileSync(localDataFile, "utf8");
+        if (raw.trim().length > 0) break;
+      } catch (err: any) {
+        if (attempt < 4 && (err.code === "EBUSY" || err.code === "EPERM")) {
+          const start = Date.now();
+          while (Date.now() - start < 15) {}
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!raw.trim()) {
+      if (storeCache) return storeCache.store;
+      return { itineraries: {}, versions: {} };
+    }
+
+    const parsed = JSON.parse(raw);
+    const store: LocalStore = {
+      itineraries: parsed.itineraries || {},
+      versions: parsed.versions || {},
+    };
+    storeCache = { mtimeMs: stat.mtimeMs, store };
+    return store;
+  } catch (err) {
+    if (storeCache) {
+      return storeCache.store;
+    }
     return { itineraries: {}, versions: {} };
   }
 }
@@ -55,19 +101,74 @@ function saveLocalStore(store: LocalStore) {
   if (!fs.existsSync(localDataDir)) {
     fs.mkdirSync(localDataDir, { recursive: true });
   }
-  fs.writeFileSync(localDataFile, JSON.stringify(store, null, 2), "utf8");
+  const content = JSON.stringify(store, null, 2);
+  const tmpFile = path.join(localDataDir, `itineraries.${process.pid}.${Date.now()}.tmp`);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      fs.writeFileSync(tmpFile, content, "utf8");
+      try {
+        fs.renameSync(tmpFile, localDataFile);
+      } catch {
+        fs.copyFileSync(tmpFile, localDataFile);
+        try { fs.unlinkSync(tmpFile); } catch {}
+      }
+
+      const stat = fs.statSync(localDataFile);
+      storeCache = { mtimeMs: stat.mtimeMs, store };
+      return;
+    } catch (err: any) {
+      try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch {}
+      if (attempt < 4) {
+        const start = Date.now();
+        while (Date.now() - start < 20) {}
+        continue;
+      }
+      fs.writeFileSync(localDataFile, content, "utf8");
+      try {
+        const stat = fs.statSync(localDataFile);
+        storeCache = { mtimeMs: stat.mtimeMs, store };
+      } catch {}
+    }
+  }
 }
 
 /**
- * Fetch itinerary by ID with automatic schema migration
+ * Fetch itinerary by ID with automatic schema migration and strict ownership filtering.
+ *
+ * Rules:
+ * - Admin: Access any non-deleted proposal.
+ * - Salesperson: Access ONLY their own proposals (where owner_id = user.id). Returns null if unowned (404 anti-probing).
+ * - Internal (undefined user, e.g. token-verified print render): Fetch non-deleted proposal by ID.
+ * - Unauthenticated (null user): Returns null.
  */
-export async function getItinerary(id: string): Promise<Itinerary | null> {
+export async function getItinerary(
+  id: string,
+  user?: AuthenticatedUser | null
+): Promise<Itinerary | null> {
+  if (user === null) {
+    return null; // Explicitly unauthenticated -> not found
+  }
+
   // 1. Try DB
   try {
-    const rows = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
+    const conditions = [eq(itineraries.id, id), isNull(itineraries.deletedAt)];
+    if (user?.role === "salesperson") {
+      conditions.push(eq(itineraries.ownerId, user.id));
+    }
+
+    const rows = await db
+      .select()
+      .from(itineraries)
+      .where(and(...conditions))
+      .limit(1);
+
     if (rows.length > 0) {
       return migrateItinerarySchema(rows[0].currentData);
     }
+
+    // If query returned no rows and we had a valid DB connection, record is either missing or unowned
+    // (Notice: we don't fall back to local store if DB is actively working and returned empty)
   } catch (err) {
     // DB offline, fallback to local file store
   }
@@ -75,14 +176,240 @@ export async function getItinerary(id: string): Promise<Itinerary | null> {
   // 2. Fallback to local store
   const store = getLocalStore();
   const entry = store.itineraries[id];
-  return entry ? migrateItinerarySchema(entry.currentData) : null;
+  if (!entry) return null;
+
+  // Soft-deleted records are hidden from standard operations
+  if (entry.deletedAt) return null;
+
+  // Salesperson ownership enforcement (anti-probing)
+  if (user?.role === "salesperson" && entry.ownerId && entry.ownerId !== user.id) {
+    return null;
+  }
+
+  return migrateItinerarySchema(entry.currentData);
 }
 
 /**
- * Create or save itinerary
+ * Create or save an itinerary with automatic ownership stamps and audit logging.
  */
-export async function saveItineraryData(id: string, data: Itinerary): Promise<void> {
+export async function saveItineraryData(
+  id: string,
+  data: Itinerary,
+  user?: AuthenticatedUser | null
+): Promise<void> {
   const title = data.package.title || "Untitled Itinerary";
+  const now = new Date();
+  const actorId = user?.id || null;
+  const ownerId = user?.id || data.ownership?.ownerId || null;
+
+  // 1. Try DB
+  try {
+    const existing = await db
+      .select()
+      .from(itineraries)
+      .where(eq(itineraries.id, id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const row = existing[0];
+      // Anti-probing: reject update if soft-deleted or unowned by this salesperson
+      if (row.deletedAt) {
+        const error = new Error("Itinerary not found");
+        (error as any).status = 404;
+        throw error;
+      }
+      if (user?.role === "salesperson" && row.ownerId && row.ownerId !== user.id) {
+        const error = new Error("Itinerary not found");
+        (error as any).status = 404;
+        throw error;
+      }
+
+      await db
+        .update(itineraries)
+        .set({
+          title,
+          currentData: data,
+          updatedBy: actorId,
+          updatedAt: now,
+        })
+        .where(eq(itineraries.id, id));
+
+      await recordAuditEvent({
+        actorId: actorId || undefined,
+        action: "itinerary.update",
+        targetType: "itinerary",
+        targetId: id,
+        metadata: { title },
+      });
+      return;
+    } else {
+      await db.insert(itineraries).values({
+        id,
+        title,
+        status: "draft",
+        currentData: data,
+        ownerId,
+        createdBy: actorId,
+        updatedBy: actorId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await recordAuditEvent({
+        actorId: actorId || undefined,
+        action: "itinerary.create",
+        targetType: "itinerary",
+        targetId: id,
+        metadata: { title, ownerId },
+      });
+      return;
+    }
+  } catch (err: any) {
+    if (err?.status === 404) throw err;
+    // DB offline, fallback to local store
+  }
+
+  // 2. Save in local store
+  const store = getLocalStore();
+  const existingEntry = store.itineraries[id];
+
+  if (existingEntry) {
+    if (existingEntry.deletedAt) {
+      const error = new Error("Itinerary not found");
+      (error as any).status = 404;
+      throw error;
+    }
+    if (user?.role === "salesperson" && existingEntry.ownerId && existingEntry.ownerId !== user.id) {
+      const error = new Error("Itinerary not found");
+      (error as any).status = 404;
+      throw error;
+    }
+
+    store.itineraries[id] = {
+      ...existingEntry,
+      title,
+      currentData: data,
+      updatedBy: actorId,
+      updatedAt: now.toISOString(),
+    };
+    saveLocalStore(store);
+
+    await recordAuditEvent({
+      actorId: actorId || undefined,
+      action: "itinerary.update",
+      targetType: "itinerary",
+      targetId: id,
+      metadata: { title },
+    });
+  } else {
+    store.itineraries[id] = {
+      id,
+      title,
+      status: "draft",
+      currentData: data,
+      ownerId,
+      createdBy: actorId,
+      updatedBy: actorId,
+      updatedAt: now.toISOString(),
+      createdAt: now.toISOString(),
+    };
+    saveLocalStore(store);
+
+    await recordAuditEvent({
+      actorId: actorId || undefined,
+      action: "itinerary.create",
+      targetType: "itinerary",
+      targetId: id,
+      metadata: { title, ownerId },
+    });
+  }
+}
+
+/**
+ * Explicit helper to create an itinerary owned by the authenticated user.
+ */
+export async function createItinerary(
+  id: string,
+  data: Itinerary,
+  user: AuthenticatedUser
+): Promise<void> {
+  return saveItineraryData(id, data, user);
+}
+
+/**
+ * Soft delete an itinerary (hides record from salesperson views, accessible in admin trash).
+ * Enforces ownership: only an admin or the designated owner can delete.
+ *
+ * @returns {Promise<boolean>} true if deleted, false if not found / unowned (404 anti-probing).
+ */
+export async function softDeleteItinerary(
+  id: string,
+  user: AuthenticatedUser
+): Promise<boolean> {
+  const now = new Date();
+
+  // 1. Try DB
+  try {
+    const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
+    if (existing.length > 0) {
+      const row = existing[0];
+      if (row.deletedAt) return false;
+      if (user.role === "salesperson" && row.ownerId && row.ownerId !== user.id) {
+        return false; // Anti-probing: return false (translates to 404)
+      }
+
+      await db
+        .update(itineraries)
+        .set({ deletedAt: now, deletedBy: user.id })
+        .where(eq(itineraries.id, id));
+
+      await recordAuditEvent({
+        actorId: user.id,
+        action: "itinerary.soft_delete",
+        targetType: "itinerary",
+        targetId: id,
+        metadata: { title: row.title, ownerId: row.ownerId },
+      });
+      return true;
+    }
+  } catch (err) {
+    // DB offline, fall through to local store
+  }
+
+  // 2. Local store
+  const store = getLocalStore();
+  const entry = store.itineraries[id];
+  if (entry) {
+    if (entry.deletedAt) return false;
+    if (user.role === "salesperson" && entry.ownerId && entry.ownerId !== user.id) {
+      return false;
+    }
+
+    entry.deletedAt = now.toISOString();
+    entry.deletedBy = user.id;
+    saveLocalStore(store);
+
+    await recordAuditEvent({
+      actorId: user.id,
+      action: "itinerary.soft_delete",
+      targetType: "itinerary",
+      targetId: id,
+      metadata: { title: entry.title, ownerId: entry.ownerId },
+    });
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Restore a soft-deleted proposal (Administrator privilege required).
+ */
+export async function restoreItinerary(
+  id: string,
+  adminUser: AuthenticatedUser
+): Promise<boolean> {
+  if (adminUser.role !== "admin") return false;
   const now = new Date();
 
   // 1. Try DB
@@ -91,35 +418,98 @@ export async function saveItineraryData(id: string, data: Itinerary): Promise<vo
     if (existing.length > 0) {
       await db
         .update(itineraries)
-        .set({ title, currentData: data, updatedAt: now })
+        .set({ deletedAt: null, deletedBy: null, updatedBy: adminUser.id, updatedAt: now })
         .where(eq(itineraries.id, id));
-      return;
-    } else {
-      await db.insert(itineraries).values({
-        id,
-        title,
-        status: "draft",
-        currentData: data,
-        createdAt: now,
-        updatedAt: now,
+
+      await recordAuditEvent({
+        actorId: adminUser.id,
+        action: "itinerary.restore",
+        targetType: "itinerary",
+        targetId: id,
+        metadata: { title: existing[0].title },
       });
-      return;
+      return true;
     }
   } catch (err) {
-    // DB offline, fallback to local store
+    // DB offline
   }
 
-  // 2. Save in local store
+  // 2. Local store
   const store = getLocalStore();
-  store.itineraries[id] = {
-    id,
-    title,
-    status: "draft",
-    currentData: data,
-    updatedAt: now.toISOString(),
-    createdAt: store.itineraries[id]?.createdAt || now.toISOString(),
-  };
-  saveLocalStore(store);
+  const entry = store.itineraries[id];
+  if (entry) {
+    delete entry.deletedAt;
+    delete entry.deletedBy;
+    entry.updatedAt = now.toISOString();
+    saveLocalStore(store);
+
+    await recordAuditEvent({
+      actorId: adminUser.id,
+      action: "itinerary.restore",
+      targetType: "itinerary",
+      targetId: id,
+      metadata: { title: entry.title },
+    });
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Reassign proposal ownership to another salesperson (Administrator privilege required).
+ */
+export async function reassignItinerary(
+  id: string,
+  newOwnerId: string,
+  adminUser: AuthenticatedUser
+): Promise<boolean> {
+  if (adminUser.role !== "admin") return false;
+  const now = new Date();
+
+  // 1. Try DB
+  try {
+    const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
+    if (existing.length > 0) {
+      const prevOwner = existing[0].ownerId;
+      await db
+        .update(itineraries)
+        .set({ ownerId: newOwnerId, updatedBy: adminUser.id, updatedAt: now })
+        .where(eq(itineraries.id, id));
+
+      await recordAuditEvent({
+        actorId: adminUser.id,
+        action: "itinerary.reassign",
+        targetType: "itinerary",
+        targetId: id,
+        metadata: { previousOwnerId: prevOwner, newOwnerId },
+      });
+      return true;
+    }
+  } catch (err) {
+    // DB offline
+  }
+
+  // 2. Local store
+  const store = getLocalStore();
+  const entry = store.itineraries[id];
+  if (entry) {
+    const prevOwner = entry.ownerId;
+    entry.ownerId = newOwnerId;
+    entry.updatedAt = now.toISOString();
+    saveLocalStore(store);
+
+    await recordAuditEvent({
+      actorId: adminUser.id,
+      action: "itinerary.reassign",
+      targetType: "itinerary",
+      targetId: id,
+      metadata: { previousOwnerId: prevOwner, newOwnerId },
+    });
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -258,7 +648,11 @@ export interface ItinerarySummary {
   updatedAt: string;
   createdAt: string;
   hasPdf: boolean;
+  lastPdfUrl?: string | null;
   versionCount: number;
+  ownerId?: string | null;
+  createdBy?: string | null;
+  deletedAt?: string | null;
 }
 
 function toSummary(
@@ -268,7 +662,10 @@ function toSummary(
   currentData: Itinerary,
   createdAt: string | Date,
   updatedAt: string | Date,
-  versions: VersionSummary[] = []
+  versions: VersionSummary[] = [],
+  ownerId?: string | null,
+  createdBy?: string | null,
+  deletedAt?: string | null
 ): ItinerarySummary {
   let data: any = currentData;
   try {
@@ -284,10 +681,10 @@ function toSummary(
   const nightsCount = pkg.nights || Math.max(0, daysCount - 1);
 
   let sellingPricePaise = 0;
-  if (data.pricing?.netPricePaise && data.pricing?.markup) {
-    try {
-      sellingPricePaise = computeSellingPricePaise(data.pricing.netPricePaise, data.pricing.markup);
-    } catch {}
+  if (data.pricing?.netAmountPaise) {
+    sellingPricePaise = data.pricing.netAmountPaise;
+  } else if (data.pricing?.totalPackagePricePaise) {
+    sellingPricePaise = data.pricing.totalPackagePricePaise;
   }
   const sellingPriceFormatted = sellingPricePaise > 0 ? formatInr(sellingPricePaise) : "₹0";
 
@@ -308,7 +705,11 @@ function toSummary(
     updatedAt: typeof updatedAt === "string" ? updatedAt : updatedAt.toISOString(),
     createdAt: typeof createdAt === "string" ? createdAt : createdAt.toISOString(),
     hasPdf,
+    lastPdfUrl: hasPdf ? `/api/itineraries/${id}/pdf` : null,
     versionCount: versions.length,
+    ownerId: ownerId || null,
+    createdBy: createdBy || null,
+    deletedAt: deletedAt || null,
   };
 }
 
@@ -332,15 +733,48 @@ function filterSummaries(
   return result;
 }
 
-export async function listItineraries(query?: {
-  search?: string;
-  status?: string;
-}): Promise<ItinerarySummary[]> {
+/**
+ * List itineraries scoped by role:
+ * - Admin: Sees all proposals across agency (optionally filtered by ownerFilter).
+ * - Salesperson: Strictly sees proposals where owner_id = user.id.
+ */
+export async function listItineraries(
+  user?: AuthenticatedUser | null,
+  query?: {
+    search?: string;
+    status?: string;
+    ownerFilter?: string;
+    includeDeleted?: boolean;
+    deletedOnly?: boolean;
+  }
+): Promise<ItinerarySummary[]> {
+  if (user === null) {
+    return [];
+  }
+
   const summaries: ItinerarySummary[] = [];
 
   // 1. Try DB
   try {
-    const rows = await db.select().from(itineraries).orderBy(desc(itineraries.updatedAt));
+    const conditions = [];
+    if (query?.deletedOnly) {
+      conditions.push(isNotNull(itineraries.deletedAt));
+    } else if (!query?.includeDeleted) {
+      conditions.push(isNull(itineraries.deletedAt));
+    }
+    if (user?.role === "salesperson") {
+      conditions.push(eq(itineraries.ownerId, user.id));
+    } else if (user?.role === "admin" && query?.ownerFilter) {
+      conditions.push(eq(itineraries.ownerId, query.ownerFilter));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const rows = await db
+      .select()
+      .from(itineraries)
+      .where(whereClause)
+      .orderBy(desc(itineraries.updatedAt));
+
     if (rows && rows.length > 0) {
       for (const row of rows) {
         let versions: VersionSummary[] = [];
@@ -361,7 +795,18 @@ export async function listItineraries(query?: {
         } catch {}
 
         summaries.push(
-          toSummary(row.id, row.title, row.status, row.currentData, row.createdAt, row.updatedAt, versions)
+          toSummary(
+            row.id,
+            row.title,
+            row.status,
+            row.currentData,
+            row.createdAt,
+            row.updatedAt,
+            versions,
+            row.ownerId,
+            row.createdBy,
+            row.deletedAt ? row.deletedAt.toISOString() : null
+          )
         );
       }
       return filterSummaries(summaries, query);
@@ -372,7 +817,22 @@ export async function listItineraries(query?: {
 
   // 2. Local store fallback
   const store = getLocalStore();
-  const entries = Object.values(store.itineraries || {});
+  let entries = Object.values(store.itineraries || {});
+
+  // Exclude soft-deleted records unless explicitly requested
+  if (query?.deletedOnly) {
+    entries = entries.filter((e) => !!e.deletedAt);
+  } else if (!query?.includeDeleted) {
+    entries = entries.filter((e) => !e.deletedAt);
+  }
+
+  // Role scoping: salesperson only sees their own
+  if (user?.role === "salesperson") {
+    entries = entries.filter((e) => e.ownerId === user.id);
+  } else if (user?.role === "admin" && query?.ownerFilter) {
+    entries = entries.filter((e) => e.ownerId === query.ownerFilter);
+  }
+
   for (const entry of entries) {
     const versions = store.versions[entry.id] || [];
     summaries.push(
@@ -383,7 +843,10 @@ export async function listItineraries(query?: {
         entry.currentData,
         entry.createdAt || entry.updatedAt,
         entry.updatedAt,
-        versions
+        versions,
+        entry.ownerId,
+        entry.createdBy,
+        entry.deletedAt || null
       )
     );
   }
@@ -392,6 +855,9 @@ export async function listItineraries(query?: {
   return filterSummaries(summaries, query);
 }
 
+/**
+ * Hard delete an itinerary and its historical versions (internal/cleanup only)
+ */
 export async function deleteItinerary(id: string): Promise<boolean> {
   // 1. Try DB
   try {

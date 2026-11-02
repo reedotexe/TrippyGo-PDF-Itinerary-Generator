@@ -1,64 +1,69 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SESSION_COOKIE_NAME, DEFAULT_DEV_SESSION } from "@/lib/auth/session";
+import { getSessionCookie } from "better-auth/cookies";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Exempt public routes and assets
+  // 1. Exempt public routes, auth flows, static assets, and HMAC-guarded print routes
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/Brand Assets") ||
-    pathname.startsWith("/print") || // Protected by HMAC render tokens
-    pathname.startsWith("/api/extract") ||
-    pathname.startsWith("/api/images") ||
-    pathname.startsWith("/api/storage/download")
+    pathname.startsWith("/brand") ||
+    pathname.startsWith("/fonts") ||
+    pathname.startsWith("/api/auth") ||
+    pathname === "/login" ||
+    pathname === "/set-password" ||
+    pathname === "/reset-password" ||
+    pathname.startsWith("/print") // Print is strictly sessionless, guarded by 60s HMAC token
   ) {
     return NextResponse.next();
   }
 
-  // 2. Read session cookie
-  const cookieVal = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  let userSession = null;
+  // 2. Session detection (Cookie or test runner headers)
+  const sessionCookie =
+    getSessionCookie(req) ||
+    req.cookies.get("better-auth.session_token")?.value ||
+    req.cookies.get("trippygo_session")?.value;
 
-  if (cookieVal) {
-    try {
-      userSession = JSON.parse(cookieVal);
-    } catch {
-      // Malformed cookie
-    }
-  }
+  const testUserId = req.headers.get("x-user-id");
+  const testUserRole = req.headers.get("x-user-role");
+  const isAuthenticated = Boolean(sessionCookie || testUserId);
 
-  // Allow development mode fallback or test header
-  const roleHeader = req.headers.get("x-user-role");
-  if (roleHeader === "admin") {
-    userSession = { id: "u-admin", role: "admin", name: "Admin User" };
-  } else if (roleHeader === "salesperson") {
-    userSession = DEFAULT_DEV_SESSION;
-  } else if (!userSession && process.env.NODE_ENV !== "production") {
-    userSession = DEFAULT_DEV_SESSION;
-  }
-
-  // 3. Admin Route Protection
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    if (!userSession || userSession.role !== "admin") {
-      // In development mode, auto-grant admin if directly visiting admin route
-      if (process.env.NODE_ENV !== "production") {
-        return NextResponse.next();
-      }
+  // 3. Routing gate for unauthenticated visitors
+  if (!isAuthenticated) {
+    if (pathname.startsWith("/api/")) {
       return new NextResponse(
-        JSON.stringify({ error: "Forbidden: Admin privileges required" }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized: Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // 4. Inject authenticated session headers for downstream routes
+  // 4. Role gate for Administrative routes (/admin/* and /api/admin/*)
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+    if (testUserRole && testUserRole !== "admin") {
+      if (pathname.startsWith("/api/admin")) {
+        return new NextResponse(
+          JSON.stringify({ error: "Forbidden: Administrator privileges required" }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+  }
+
+  // 5. Downstream header propagation
   const response = NextResponse.next();
-  if (userSession) {
-    response.headers.set("x-user-id", userSession.id);
-    response.headers.set("x-user-role", userSession.role);
+  if (testUserId) {
+    response.headers.set("x-user-id", testUserId);
+  }
+  if (testUserRole) {
+    response.headers.set("x-user-role", testUserRole);
   }
 
   return response;
@@ -66,9 +71,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/admin/:path*",
-    "/api/admin/:path*",
-    "/itineraries/:path*",
-    "/api/itineraries/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|brand|Brand Assets|fonts).*)",
   ],
 };

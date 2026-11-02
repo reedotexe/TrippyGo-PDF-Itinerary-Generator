@@ -1,0 +1,74 @@
+{
+  "dev_sess_d125ffa9-ded1-4b30-b92b-e11f9aa5c2c2": {
+    "id": "dev_sess_d125ffa9-ded1-4b30-b92b-e11f9aa5c2c2",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-02T05:50:33.740Z",
+    "expiresAt": "2026-12-02T05:50:33.740Z"
+  },
+  "dev_sess_9c3c4319-512e-477c-b1f8-23bf883dbb0d": {
+    "id": "dev_sess_9c3c4319-512e-477c-b1f8-23bf883dbb0d",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-02T06:19:39.193Z",
+    "expiresAt": "2026-12-02T06:19:39.193Z"
+  },
+  "dev_sess_345f9200-dca2-4d14-a9ef-31c648d23a62": {
+    "id": "dev_sess_345f9200-dca2-4d14-a9ef-31c648d23a62",
+    "userId": "usr_c4b7ae43",
+    "role": "salesperson",
+    "email": "reereeree369@gmail.com",
+    "name": "Reedham 2",
+    "createdAt": "2026-11-02T07:02:14.576Z",
+    "expiresAt": "2026-12-02T07:02:14.576Z"
+  },
+  "dev_sess_d138c45b-2ad6-42b2-a33d-92e2b3d22cdc": {
+    "id": "dev_sess_d138c45b-2ad6-42b2-a33d-92e2b3d22cdc",
+    "userId": "usr_c4b7ae43",
+    "role": "salesperson",
+    "email": "reereeree369@gmail.com",
+    "name": "Reedham 2",
+    "createdAt": "2026-11-02T07:26:20.542Z",
+    "expiresAt": "2026-12-02T07:26:20.542Z"
+  },
+  "dev_sess_6a37f33d-963d-43ca-b696-d069caa2f29e": {
+    "id": "dev_sess_6a37f33d-963d-43ca-b696-d069caa2f29e",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-02T07:45:53.711Z",
+    "expiresAt": "2026-12-02T07:45:53.711Z"
+  },
+  "dev_sess_bc98a00e-d993-40af-b09e-c8444871a7d9": {
+    "id": "dev_sess_bc98a00e-d993-40af-b09e-c8444871a7d9",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-02T07:48:41.114Z",
+    "expiresAt": "2026-12-02T07:48:41.114Z"
+  },
+  "dev_sess_f1ca9598-ae74-4e4e-b02d-25b432ab372a": {
+    "id": "dev_sess_f1ca9598-ae74-4e4e-b02d-25b432ab372a",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-02T09:57:43.524Z",
+    "expiresAt": "2026-12-02T09:57:43.524Z"
+  },
+  "dev_sess_6d205782-3e6b-40a4-af8f-b6e5d1387f2f": {
+    "id": "dev_sess_6d205782-3e6b-40a4-af8f-b6e5d1387f2f",
+    "userId": "usr_c4b7ae43",
+    "role": "salesperson",
+    "email": "reereeree369@gmail.com",
+    "name": "Reedham 2",
+    "createdAt": "2026-11-02T10:23:04.627Z",
+    "expiresAt": "2026-12-02T10:23:04.627Z"
+  }
+}

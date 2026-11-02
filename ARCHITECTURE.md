@@ -242,6 +242,49 @@ Headless Chromium instances cannot reuse user session cookies. To render the pri
 
 ---
 
+
+### 2.7 Role-Based Access Control, 404 Anti-Probing & Audit Trail Architecture
+
+TrippyGo implements an enterprise-grade authorization and data isolation boundary designed to eliminate unauthorized cross-salesperson proposal access and supplier net rate leakage:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│             TRIPPYGO SECURITY & AUTHORIZATION ARCHITECTURE             │
+├────────────────────────────────────────────────────────────────────────┤
+│ 1. ROUTE GUARD & EDGE MIDDLEWARE (src/middleware.ts)                   │
+│    • Lightweight edge cookie validation via getSessionCookie()         │
+│    • Protects /admin/* routes, exempts public & HMAC print routes      │
+│                                                                        │
+│ 2. SERVER SESSION VALIDATION (src/lib/auth/guard.ts)                   │
+│    • Real-time DB lookup ensuring banned/suspended users are           │
+│      immediately rejected with HTTP 403 Forbidden                      │
+│    • requireUser() & requireAdmin() route guards                       │
+│                                                                        │
+│ 3. DATA ACCESS LAYER & 404 ANTI-PROBING (src/lib/db/itineraries.ts)    │
+│    • Salesperson: SELECT WHERE owner_id = user.id AND deleted_at IS NULL│
+│    • Admin: Global agency visibility + trash inspection                │
+│    • ANTI-PROBING INVARIANT: Accessing unowned proposal returns NULL,  │
+│      yielding HTTP 404 Not Found (never 403) to eliminate ID probing   │
+│                                                                        │
+│ 4. PROPOSAL LIFECYCLE & SOFT DELETION                                  │
+│    • Soft delete: sets deleted_at and deleted_by (hidden from staff)   │
+│    • Admin restore: clears deleted_at, returns proposal to owner       │
+│    • Admin reassign: changes owner_id, proposal shifts instantaneously │
+│                                                                        │
+│ 5. IMMUTABLE ACTIVITY & SECURITY AUDIT LEDGER (audit_logs table)       │
+│    • Append-only ledger recording all sensitive mutations              │
+│    • Captures: actor, action, target, metadata, IP address, timestamp  │
+│    • Resilient offline fallback to .data/audit_logs.json               │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Key Security Invariants:
+1. **The 404 Anti-Probing Invariant:** If Salesperson A attempts to query, mutate, delete, or generate a PDF for an itinerary owned by Salesperson B, the server responds with **`404 Not Found`**. Returning `403 Forbidden` would confirm the existence of the document, exposing the agency to ID enumeration attacks.
+2. **Last Active Admin Protection:** The user management system prevents demoting or deactivating the last active administrator, guaranteeing the agency cannot be locked out of executive controls.
+3. **Zero Net Rate Exposure in Auth Layer:** Ownership metadata and user profiles are completely decoupled from pricing calculations. All client-facing payloads continue through `computeClientView()`.
+
+---
+
 ## 3. Security & Threat Mitigation
 
 | Threat Vector | Mitigation Strategy | Implementation |

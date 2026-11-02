@@ -99,7 +99,22 @@ export async function uploadSourceFile(
  * Generate a pre-signed S3 download URL (default 1-hour expiry) with local file fallback
  */
 export async function getPresignedDownloadUrl(key: string, expiresIn: number = 3600): Promise<string> {
-  const localFilePath = path.join(process.cwd(), ".uploads", key);
+  let localFilePath = path.join(process.cwd(), ".uploads", key);
+  if (!fs.existsSync(localFilePath)) {
+    const dir = path.dirname(localFilePath);
+    const base = path.basename(localFilePath);
+    if (fs.existsSync(dir)) {
+      const match = base.match(/^v_(\d+\.pdf)$/);
+      if (match) {
+        const found = fs.readdirSync(dir).find((f) => f.endsWith(`_${match[1]}`));
+        if (found) {
+          localFilePath = path.join(dir, found);
+          key = path.relative(path.join(process.cwd(), ".uploads"), localFilePath).replace(/\\/g, "/");
+        }
+      }
+    }
+  }
+
   if (fs.existsSync(localFilePath)) {
     return `/api/storage/download?key=${encodeURIComponent(key)}`;
   }

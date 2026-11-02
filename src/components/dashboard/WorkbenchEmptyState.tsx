@@ -9,7 +9,7 @@ interface WorkbenchEmptyStateProps {
   searchQuery?: string;
   onClearSearch: () => void;
   onOpenNewModal: () => void;
-  onLoadSample: () => void;
+  onLoadSample?: () => void;
   isProcessing?: boolean;
 }
 
@@ -18,7 +18,6 @@ export function WorkbenchEmptyState({
   searchQuery,
   onClearSearch,
   onOpenNewModal,
-  onLoadSample,
   isProcessing = false,
 }: WorkbenchEmptyStateProps) {
   if (isSearchEmpty) {
@@ -56,22 +55,15 @@ export function WorkbenchEmptyState({
         Create your first itinerary to generate luxury, client-ready proposals in minutes.
       </p>
 
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <div className="flex items-center justify-center">
         <Button
           variant="outline"
           onClick={onOpenNewModal}
           disabled={isProcessing}
+          className="gap-1.5"
         >
           <Plus className="w-4 h-4" />
           New itinerary
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onLoadSample}
-          disabled={isProcessing}
-        >
-          Load Kashmir sample
         </Button>
       </div>
     </div>

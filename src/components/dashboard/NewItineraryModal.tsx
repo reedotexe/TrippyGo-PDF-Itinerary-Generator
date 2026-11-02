@@ -56,19 +56,22 @@ export function NewItineraryModal({
     setFileError(null);
     const file = e.dataTransfer.files?.[0];
     if (file) {
+      const lowerName = file.name.toLowerCase();
       const isPdfOrTxt =
         file.type === "application/pdf" ||
         file.type === "text/plain" ||
-        file.name.endsWith(".txt") ||
-        file.name.endsWith(".pdf");
+        lowerName.endsWith(".txt") ||
+        lowerName.endsWith(".pdf");
 
       if (!isPdfOrTxt) {
         setFileError("Please select a PDF or text file.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
 
       if (file.size > 10 * 1024 * 1024) {
         setFileError("File size exceeds 10 MB limit.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
 
@@ -80,11 +83,33 @@ export function NewItineraryModal({
     setFileError(null);
     const file = e.target.files?.[0];
     if (file) {
+      const lowerName = file.name.toLowerCase();
+      const isPdfOrTxt =
+        file.type === "application/pdf" ||
+        file.type === "text/plain" ||
+        lowerName.endsWith(".txt") ||
+        lowerName.endsWith(".pdf");
+
+      if (!isPdfOrTxt) {
+        setFileError("Please select a PDF or text file.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
       if (file.size > 10 * 1024 * 1024) {
         setFileError("File size exceeds 10 MB limit.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
       setSelectedFile(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setFileError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -193,7 +218,7 @@ export function NewItineraryModal({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedFile(null)}
+                    onClick={handleRemoveFile}
                     className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2"
                   >
                     <X className="size-3 mr-1" />

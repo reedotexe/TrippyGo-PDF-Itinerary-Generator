@@ -92,15 +92,27 @@ export const verifications = verification;
 /**
  * Primary Itineraries table
  */
-export const itineraries = pgTable("itineraries", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  title: text("title").notNull(),
-  status: itineraryStatusEnum("status").default("draft").notNull(),
-  currentData: jsonb("current_data").$type<Itinerary>().notNull(),
-  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const itineraries = pgTable(
+  "itineraries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    status: itineraryStatusEnum("status").default("draft").notNull(),
+    currentData: jsonb("current_data").$type<Itinerary>().notNull(),
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "restrict" }),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("itineraries_owner_id_idx").on(table.ownerId),
+    index("itineraries_owner_deleted_idx").on(table.ownerId, table.deletedAt),
+    index("itineraries_deleted_at_idx").on(table.deletedAt),
+  ]
+);
 
 /**
  * Immutable Itinerary Versions (created whenever a PDF is generated)
@@ -117,6 +129,29 @@ export const itineraryVersions = pgTable("itinerary_versions", {
   pdfS3Key: text("pdf_s3_key"),
   pdfJsonHash: text("pdf_json_hash"),
 });
+
+/**
+ * Immutable Activity & Security Audit Log Ledger
+ */
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    ipAddress: text("ip_address"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("audit_logs_actor_id_idx").on(table.actorId),
+    index("audit_logs_action_idx").on(table.action),
+    index("audit_logs_created_at_idx").on(table.createdAt),
+    index("audit_logs_target_idx").on(table.targetType, table.targetId),
+  ]
+);
 
 export type UserRow = typeof user.$inferSelect;
 export type NewUserRow = typeof user.$inferInsert;
@@ -135,3 +170,6 @@ export type NewItineraryRow = typeof itineraries.$inferInsert;
 
 export type ItineraryVersionRow = typeof itineraryVersions.$inferSelect;
 export type NewItineraryVersionRow = typeof itineraryVersions.$inferInsert;
+
+export type AuditLogRow = typeof auditLogs.$inferSelect;
+export type NewAuditLogRow = typeof auditLogs.$inferInsert;

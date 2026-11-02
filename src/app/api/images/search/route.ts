@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchImages } from "@/lib/images/client";
+import { requireUser, toAuthResponse } from "@/lib/auth/guard";
 import {
   checkRateLimit,
   getClientIdentifier,
@@ -9,7 +10,8 @@ import {
 export async function GET(req: NextRequest) {
   try {
     // 0. Rate limiting (100 searches / hour per client)
-    const clientId = getClientIdentifier(req);
+    const { user } = await requireUser(req);
+    const clientId = getClientIdentifier(req, user.id);
     const maxRequests = process.env.NODE_ENV === "production" ? 100 : 500;
     const rateCheck = checkRateLimit(`images_${clientId}`, {
       maxRequests,
@@ -46,7 +48,8 @@ export async function GET(req: NextRequest) {
       count: images.length,
       images,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.status) return toAuthResponse(error);
     return NextResponse.json(
       { error: "Failed to search images", details: (error as Error).message },
       { status: 500 }

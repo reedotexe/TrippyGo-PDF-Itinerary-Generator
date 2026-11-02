@@ -238,8 +238,8 @@ Evolve the relational database schema to link every itinerary to a distinct owne
 
 ### Detailed Implementation Tasks & Checklist
 
-- [ ] **2.1 Schema Definition Updates (`src/db/schema.ts`)**
-  - [ ] Update `itineraries` table:
+- [x] **2.1 Schema Definition Updates (`src/db/schema.ts`)**
+  - [x] Update `itineraries` table:
     - Add `ownerId`: `text("owner_id").notNull().references(() => user.id, { onDelete: "restrict" })`.
     - Add index on `owner_id` for fast scoped queries (`itineraries_owner_id_idx`).
     - Add `createdBy`: `text("created_by").references(() => user.id, { onDelete: "set null" })`.
@@ -247,7 +247,7 @@ Evolve the relational database schema to link every itinerary to a distinct owne
     - Add `deletedAt`: `timestamp("deleted_at", { withTimezone: true })`.
     - Add `deletedBy`: `text("deleted_by").references(() => user.id, { onDelete: "set null" })`.
     - Add compound index on `(owner_id, deleted_at)` and `(deleted_at)`.
-  - [ ] Create `auditLogs` table:
+  - [x] Create `auditLogs` table:
     - `id`: `uuid("id").defaultRandom().primaryKey()`
     - `actorId`: `text("actor_id").references(() => user.id, { onDelete: "set null" })`
     - `action`: `text("action").notNull()` (e.g. `itinerary.create`, `itinerary.reassign`, `itinerary.soft_delete`, `itinerary.restore`, `pdf.generate`, `user.ban`)
@@ -257,26 +257,26 @@ Evolve the relational database schema to link every itinerary to a distinct owne
     - `ipAddress`: `text("ip_address")`
     - `createdAt`: `timestamp("created_at", { withTimezone: true }).defaultNow().notNull()`
 
-- [ ] **2.2 Audit Logging Helper Library**
-  - [ ] Create `src/lib/audit/logger.ts`:
+- [x] **2.2 Audit Logging Helper Library**
+  - [x] Create `src/lib/audit/logger.ts`:
     - `recordAuditEvent(event: { actorId?: string; action: string; targetType: string; targetId: string; metadata?: Record<string, unknown>; req?: Request }): Promise<void>`
     - Extracts IP and User-Agent safely.
     - Write asynchronously to PostgreSQL without blocking user request threads.
 
-- [ ] **2.3 Itinerary Schema Version 2 Upgrade**
-  - [ ] Update `src/lib/schema/itinerary.ts`:
+- [x] **2.3 Itinerary Schema Version 2 Upgrade**
+  - [x] Update `src/lib/schema/itinerary.ts`:
     - Add optional `ownership` metadata to `Itinerary` type: `{ ownerId?: string; ownerName?: string; createdBy?: string }`.
-  - [ ] Update `src/lib/schema/migrate.ts`:
+  - [x] Update `src/lib/schema/migrate.ts`:
     - Support migration from `v1` to `v2`:
       - Set `doc.schemaVersion = 2`.
       - Normalize ownership audit fields if absent.
-  - [ ] Update `src/lib/schema/migrate.test.ts`:
+  - [x] Update `src/lib/schema/migrate.test.ts`:
     - Add unit tests verifying `v0 -> v2` and `v1 -> v2` transformations.
 
-- [ ] **2.4 Database Migration Execution**
-  - [ ] Run `npx drizzle-kit generate` to generate SQL migration scripts in `src/db/migrations/`.
-  - [ ] Apply migrations to PostgreSQL.
-  - [ ] Verify that `itineraries` and `audit_logs` match Drizzle schema definitions.
+- [x] **2.4 Database Migration Execution**
+  - [x] Run `npx drizzle-kit generate` to generate SQL migration scripts in `src/db/migrations/`.
+  - [x] Apply migrations to PostgreSQL.
+  - [x] Verify that `itineraries` and `audit_logs` match Drizzle schema definitions.
 
 ---
 
@@ -288,9 +288,9 @@ npm run test:unit
 # 2. Verify Drizzle schema compilation and migration status
 npx drizzle-kit check
 ```
-- [ ] `migrateItinerarySchema` correctly outputs `schemaVersion: 2`.
-- [ ] `audit_logs` and updated `itineraries` tables are active in PostgreSQL with correct constraints and indexes.
-- [ ] Unit test suite passes without regressions.
+- [x] `migrateItinerarySchema` correctly outputs `schemaVersion: 2`.
+- [x] `audit_logs` and updated `itineraries` tables are active in PostgreSQL with correct constraints and indexes.
+- [x] Unit test suite passes without regressions.
 
 ---
 
@@ -309,8 +309,8 @@ Construct a centralized server-side data access layer enforcing ownership bounda
 
 ### Detailed Implementation Tasks & Checklist
 
-- [ ] **3.1 Server Session & Guard Utilities**
-  - [ ] Create `src/lib/auth/guard.ts`:
+- [x] **3.1 Server Session & Guard Utilities**
+  - [x] Create `src/lib/auth/guard.ts`:
     - `requireUser(req?: Request): Promise<{ user: User; session: Session }>`:
       - Validates session via `auth.api.getSession`.
       - Checks `user.banned`: if banned, immediately revokes session and throws 403 Forbidden.
@@ -319,8 +319,8 @@ Construct a centralized server-side data access layer enforcing ownership bounda
       - Calls `requireUser(req)`.
       - Checks `user.role === "admin"`. If not admin, throws 403 Forbidden.
 
-- [ ] **3.2 Centralized Data Access Layer Refactoring (`src/lib/db/itineraries.ts`)**
-  - [ ] Refactor all itinerary database functions to accept the authenticated `user: User`:
+- [x] **3.2 Centralized Data Access Layer Refactoring (`src/lib/db/itineraries.ts`)**
+  - [x] Refactor all itinerary database functions to accept the authenticated `user: User`:
     - `listItineraries(user: User, options?: { search?: string; status?: string; ownerFilter?: string }): Promise<ItinerarySummary[]>`:
       - If `user.role === 'admin'`: query all records where `deleted_at IS NULL` (optional filter by `ownerFilter`).
       - If `user.role === 'salesperson'`: strictly query `WHERE owner_id = user.id AND deleted_at IS NULL`.
@@ -349,27 +349,27 @@ Construct a centralized server-side data access layer enforcing ownership bounda
       - Update `owner_id = newOwnerId`, `updated_by = adminUser.id`.
       - Record `itinerary.reassign` audit event.
 
-- [ ] **3.3 Route Handler Protection**
-  - [ ] Update `src/app/api/itineraries/route.ts`:
+- [x] **3.3 Route Handler Protection**
+  - [x] Update `src/app/api/itineraries/route.ts`:
     - `GET`: Authenticate via `requireUser()`, return scoped list.
     - `POST`: Authenticate via `requireUser()`, stamp `owner_id = user.id`.
-  - [ ] Update `src/app/api/itineraries/[id]/route.ts`:
+  - [x] Update `src/app/api/itineraries/[id]/route.ts`:
     - `GET`: Validate via `getItinerary(id, user)`. Return 404 if null.
     - `PUT`: Validate ownership. Return 404 if unowned.
     - `DELETE`: Execute `softDeleteItinerary(id, user)`. Return 404 if unowned.
-  - [ ] Update `src/app/api/itineraries/[id]/generate/route.ts`:
+  - [x] Update `src/app/api/itineraries/[id]/generate/route.ts`:
     - Verify caller owns the proposal (or is admin).
     - If unowned: return 404 immediately.
     - If authorized: mint HMAC token and call Chromium renderer service.
     - Record `pdf.generate` audit event.
-  - [ ] Update `src/app/api/extract/route.ts`, `src/app/api/flights/route.ts`, `src/app/api/images/route.ts`:
+  - [x] Update `src/app/api/extract/route.ts`, `src/app/api/flights/route.ts`, `src/app/api/images/route.ts`:
     - Require active session via `requireUser()`.
     - Key rate limiting directly to `user.id` instead of shared office IP.
 
-- [ ] **3.4 Next.js Middleware Updates (`src/middleware.ts`)**
-  - [ ] Protect `/admin/*` and `/api/admin/*`: redirect unauthenticated to `/login`, reject non-admin users with 403.
-  - [ ] Exclude public/render paths: `/api/auth/*`, `/login`, `/set-password`, `/reset-password`, `/print/*` (HMAC guarded), `/_next/*`, static assets.
-  - [ ] Forward `x-user-id` and `x-user-role` headers to downstream route handlers.
+- [x] **3.4 Next.js Middleware Updates (`src/middleware.ts`)**
+  - [x] Protect `/admin/*` and `/api/admin/*`: redirect unauthenticated to `/login`, reject non-admin users with 403.
+  - [x] Exclude public/render paths: `/api/auth/*`, `/login`, `/set-password`, `/reset-password`, `/print/*` (HMAC guarded), `/_next/*`, static assets.
+  - [x] Forward `x-user-id` and `x-user-role` headers to downstream route handlers.
 
 ---
 
@@ -381,11 +381,11 @@ npm run test:security
 # 2. Run pricing net-rate leakage audit
 npm run test:leak
 ```
-- [ ] Salesperson A querying Salesperson B's proposal ID receives `404 Not Found`.
-- [ ] Salesperson attempting to call `/api/itineraries/[id]/generate` on an unowned proposal is rejected with 404.
-- [ ] Salesperson attempting to access `/admin/settings` is blocked with a 403 / redirected.
-- [ ] Banning a user in the database causes immediate 401/403 rejection on their subsequent requests.
-- [ ] `test:leak` passes with zero DMC net rates appearing in client payloads.
+- [x] Salesperson A querying Salesperson B's proposal ID receives `404 Not Found`.
+- [x] Salesperson attempting to call `/api/itineraries/[id]/generate` on an unowned proposal is rejected with 404.
+- [x] Salesperson attempting to access `/admin/settings` is blocked with a 403 / redirected.
+- [x] Banning a user in the database causes immediate 401/403 rejection on their subsequent requests.
+- [x] `test:leak` passes with zero DMC net rates appearing in client payloads.
 
 ---
 
@@ -486,24 +486,24 @@ The admin dashboard integrates the following CSS variable tokens generated by pr
 
 ### Detailed Implementation Tasks & Checklist
 
-- [ ] **4.1 Shadcn UI Setup & Preset Application**
-  - [ ] Apply the preset via the project runner:
+- [x] **4.1 Shadcn UI Setup & Preset Application**
+  - [x] Apply the preset via the project runner:
     ```bash
     pnpm dlx shadcn@latest apply --preset bKsFBxgG
     ```
-  - [ ] Verify `components.json` is generated/updated with proper path aliases (`@/components/ui`).
-  - [ ] Update `src/app/globals.css` with the exact `:root` and `.dark` tokens above.
-  - [ ] Ensure TrippyGo's `@theme` tokens (`--color-brand-red`, `--color-brand-navy`, `--font-serif`, etc.) and `@media print` rules remain intact.
+  - [x] Verify `components.json` is generated/updated with proper path aliases (`@/components/ui`).
+  - [x] Update `src/app/globals.css` with the exact `:root` and `.dark` tokens above.
+  - [x] Ensure TrippyGo's `@theme` tokens (`--color-brand-red`, `--color-brand-navy`, `--font-serif`, etc.) and `@media print` rules remain intact.
 
-- [ ] **4.2 Install Shadcn UI Primitives**
-  - [ ] Add the core UI primitives used in the admin cockpit:
+- [x] **4.2 Install Shadcn UI Primitives**
+  - [x] Add the core UI primitives used in the admin cockpit:
     ```bash
     pnpm dlx shadcn@latest add table dialog dropdown-menu button badge input select card tabs separator avatar alert
     ```
-  - [ ] Verify components install cleanly into `src/components/ui/`.
+  - [x] Verify components install cleanly into `src/components/ui/`.
 
-- [ ] **4.3 Shared Admin Layout & Navigation Tabs**
-  - [ ] Create `src/app/admin/layout.tsx`:
+- [x] **4.3 Shared Admin Layout & Navigation Tabs**
+  - [x] Create `src/app/admin/layout.tsx`:
     - Enforce admin authentication via `requireAdmin()`.
     - Provide a unified admin header with breadcrumb navigation.
     - Provide sub-navigation tabs using shadcn `Tabs` / `TabsList` linking:
@@ -513,8 +513,8 @@ The admin dashboard integrates the following CSS variable tokens generated by pr
       - **Audit Ledger:** `/admin/audit`
     - Styled using preset `--sidebar-*` and `bg-card` tokens.
 
-- [ ] **4.4 User Management Interface (`/admin/users`)**
-  - [ ] Create `src/app/admin/users/page.tsx`:
+- [x] **4.4 User Management Interface (`/admin/users`)**
+  - [x] Create `src/app/admin/users/page.tsx`:
     - Fetch user list via `authClient.admin.listUsers()`.
     - Render staff directory using shadcn `Table`, `TableHeader`, `TableHead`, `TableBody`, `TableRow`, `TableCell`.
     - Display user details: Name, Email, Role `Badge` (Admin: `variant="default"`, Sales: `variant="secondary"`), Status `Badge` (Active: green accent, Banned: `variant="destructive"`), assigned itinerary count, last active date.
@@ -524,29 +524,29 @@ The admin dashboard integrates the following CSS variable tokens generated by pr
       - "Deactivate / Ban User" (disabled for last active admin)
       - "Reactivate User"
 
-- [ ] **4.5 Administrative Modals**
-  - [ ] Create `src/components/admin/InviteUserModal.tsx`:
+- [x] **4.5 Administrative Modals**
+  - [x] Create `src/components/admin/InviteUserModal.tsx`:
     - Composed with shadcn `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`.
     - Form fields using shadcn `Input`, `Select`, `Button`.
     - Dispatches invite via `/api/admin/users/invite` (Better Auth + Resend).
-  - [ ] Create `src/components/admin/ReassignProposalModal.tsx`:
+  - [x] Create `src/components/admin/ReassignProposalModal.tsx`:
     - Composed with shadcn `Dialog` and `Select` to choose a new proposal owner.
     - Updates ownership via `PATCH /api/admin/itineraries/[id]/reassign`.
 
-- [ ] **4.6 Trash Management & Proposal Restore (`/admin/trash`)**
-  - [ ] Create `src/app/admin/trash/page.tsx`:
+- [x] **4.6 Trash Management & Proposal Restore (`/admin/trash`)**
+  - [x] Create `src/app/admin/trash/page.tsx`:
     - Display soft-deleted itineraries using shadcn `Table`.
     - Show Itinerary Title, Original Owner, Deletion Date, Deleted By.
     - One-click "Restore Itinerary" button with `variant="outline"`.
 
-- [ ] **4.7 Audit Ledger Viewer (`/admin/audit`)**
-  - [ ] Create `src/app/admin/audit/page.tsx`:
+- [x] **4.7 Audit Ledger Viewer (`/admin/audit`)**
+  - [x] Create `src/app/admin/audit/page.tsx`:
     - Composed using shadcn `Card`, `CardHeader`, `CardTitle`, `CardContent`, and `Table`.
     - Filters: Action type, Actor, Date range.
     - Read-only historical ledger of all authentication and proposal modification events.
 
-- [ ] **4.8 Session Controls in Global Header**
-  - [ ] Update `src/components/dashboard/WorkbenchHeader.tsx`:
+- [x] **4.8 Session Controls in Global Header**
+  - [x] Update `src/components/dashboard/WorkbenchHeader.tsx`:
     - Composed using shadcn `Avatar`, `AvatarFallback`, `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`.
     - Show user avatar with fallback initials, user name, role badge.
     - Actions: "Agency Settings" (admin), "Staff Directory" (admin), "Change Password", and "Sign Out".
@@ -554,11 +554,11 @@ The admin dashboard integrates the following CSS variable tokens generated by pr
 ---
 
 ### Phase 4 Verification & Exit Gate
-- [ ] Admin can invite a new salesperson via `/admin/users`; invitation email is generated.
-- [ ] Salesperson accepts invite, sets password, and logs in.
-- [ ] Admin can reassign a proposal from one salesperson to another, and the proposal immediately shifts visibility between user dashboards.
-- [ ] Admin can soft-delete a proposal, view it in `/admin/trash`, and restore it.
-- [ ] Last active admin cannot be deactivated or demoted (UI and API reject attempt).
+- [x] Admin can invite a new salesperson via `/admin/users`; invitation email is generated.
+- [x] Salesperson accepts invite, sets password, and logs in.
+- [x] Admin can reassign a proposal from one salesperson to another, and the proposal immediately shifts visibility between user dashboards.
+- [x] Admin can soft-delete a proposal, view it in `/admin/trash`, and restore it.
+- [x] Last active admin cannot be deactivated or demoted (UI and API reject attempt).
 
 ---
 
@@ -576,28 +576,28 @@ Implement automated authorization integration tests, ensure zero client secret l
 
 ### Detailed Implementation Tasks & Checklist
 
-- [ ] **5.1 Automated Authorization Security Test Suite**
-  - [ ] Create `tests/security/authorization.test.ts`:
+- [x] **5.1 Automated Authorization Security Test Suite**
+  - [x] Create `tests/security/authorization.test.ts`:
     - Test 1: Cross-user proposal access returns 404 (GET, PUT, DELETE).
     - Test 2: Salesperson cannot generate PDF for unowned proposal (404 returned, no HMAC minted).
     - Test 3: Salesperson cannot access `/admin/*` routes or admin API handlers (403 returned).
     - Test 4: Banned user session is rejected on subsequent request.
     - Test 5: Soft-deleted proposal is hidden from salesperson list but visible in admin trash.
     - Test 6: Last remaining admin cannot be demoted or banned.
-  - [ ] Add `"test:auth": "tsx tests/security/authorization.test.ts"` to `package.json`.
-  - [ ] Add `npm run test:auth` to the main `npm test` script.
+  - [x] Add `"test:auth": "tsx tests/security/authorization.test.ts"` to `package.json`.
+  - [x] Add `npm run test:auth` to the main `npm test` script.
 
-- [ ] **5.2 Credential & Secret Leak Guarding**
-  - [ ] Update `tests/security/api-keys.test.ts`:
+- [x] **5.2 Credential & Secret Leak Guarding**
+  - [x] Update `tests/security/api-keys.test.ts`:
     - Add `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, and `DATABASE_URL` to forbidden client-side secrets list.
     - Verify that no client components bundle server auth logic.
 
-- [ ] **5.3 End-to-End Test Suite Adaptation**
-  - [ ] Update `tests/e2e/itinerary-flow.test.ts`:
+- [x] **5.3 End-to-End Test Suite Adaptation**
+  - [x] Update `tests/e2e/itinerary-flow.test.ts`:
     - Prepend authenticated session cookie / test user login before executing the proposal creation, flight search, and PDF generation sequence.
 
-- [ ] **5.4 Deployment & Operational Documentation**
-  - [ ] Update `README.md` and `ARCHITECTURE.md` with:
+- [x] **5.4 Deployment & Operational Documentation**
+  - [x] Update `README.md` and `ARCHITECTURE.md` with:
     - Authentication architecture details.
     - Required production environment variables (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `EMAIL_FROM`).
     - Initial seeding procedure for new production instances (`npm run db:seed:auth`).
@@ -610,11 +610,11 @@ Implement automated authorization integration tests, ensure zero client secret l
 npm run test
 ```
 The implementation is officially complete when:
-- [ ] `npm run test:unit` passes (Schema migration v2 and pricing tests).
-- [ ] `npm run test:security` passes (API key scans, upload validation, network isolation, and authorization tests).
-- [ ] `npm run test:leak` passes (Client proposal payload verified 100% free of DMC net rates).
-- [ ] `npm run test:e2e` passes (Full browser flow with logged-in user).
-- [ ] `npm run build` succeeds without TypeScript or ESLint errors.
+- [x] `npm run test:unit` passes (Schema migration v2 and pricing tests).
+- [x] `npm run test:security` passes (API key scans, upload validation, network isolation, and authorization tests).
+- [x] `npm run test:leak` passes (Client proposal payload verified 100% free of DMC net rates).
+- [x] `npm run test:e2e` passes (Full browser flow with logged-in user).
+- [x] `npm run build` succeeds without TypeScript or ESLint errors.
 
 ---
 

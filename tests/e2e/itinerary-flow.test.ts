@@ -4,7 +4,7 @@ import path from "path";
 import { PDFParse } from "pdf-parse";
 import { chromium } from "playwright";
 import { extractItinerary } from "../../src/lib/extraction/client";
-import { saveItineraryData } from "../../src/lib/db/itineraries";
+import { saveItineraryData, getItinerary } from "../../src/lib/db/itineraries";
 import { computeClientView } from "../../src/lib/schema/client-view";
 import { signRenderToken } from "../../src/lib/pdf/token";
 import { formatInrBare } from "../../src/lib/pricing";
@@ -36,9 +36,17 @@ async function runE2ETest() {
   console.log(`  -> Extracted ${itinerary.days.length} Days | Net Rate: ₹${netRupees.toLocaleString("en-IN")}`);
 
   // -------------------------------------------------------------
-  // Step 2: Review Screen, Markup Configuration & Image Selection
+  // Step 2: Authenticated Salesperson Session, Review & Ownership Stamping
   // -------------------------------------------------------------
-  console.log("[Step 2] Simulating Salesperson Review: setting markup, GST, and curated images...");
+  console.log("[Step 2] Simulating Authenticated Sales Advisor Session & Review...");
+  const authenticatedAdvisor = {
+    id: "usr_e2e_advisor",
+    name: "E2E Travel Advisor",
+    email: "advisor.e2e@trippygo.com",
+    role: "salesperson" as const,
+  };
+  console.log(`  -> Authenticated Advisor Session: ${authenticatedAdvisor.name} (${authenticatedAdvisor.email})`);
+
   const itineraryId = `e2e_kashmir_${Date.now()}`;
   itinerary.pricing.markup = { type: "percent", value: 18 };
   itinerary.pricing.gstMode = "extra";
@@ -58,9 +66,17 @@ async function runE2ETest() {
     };
   });
 
-  // Save reviewed itinerary into store
-  await saveItineraryData(itineraryId, itinerary);
-  console.log(`  -> Saved configured itinerary with ID: ${itineraryId}`);
+  // Save reviewed itinerary into store with owner authentication
+  await saveItineraryData(itineraryId, itinerary, authenticatedAdvisor);
+  console.log(`  -> Saved configured itinerary with ID: ${itineraryId} owned by ${authenticatedAdvisor.id}`);
+
+  // Assert ownership access & cross-user 404 anti-probing
+  const ownerItin = await getItinerary(itineraryId, authenticatedAdvisor);
+  assert.ok(ownerItin, "Owner must be able to retrieve own proposal");
+  const foreignAdvisor = { id: "usr_foreign_sales", name: "Foreign Agent", email: "foreign@trippygo.com", role: "salesperson" as const };
+  const foreignItin = await getItinerary(itineraryId, foreignAdvisor);
+  assert.equal(foreignItin, null, "Foreign advisor must receive null (404 Anti-probing)");
+  console.log("  -> Ownership boundary verified: Owner access granted (200), Foreign access blocked (404).");
 
   // -------------------------------------------------------------
   // Step 3: Compile Client View (Stripping confidential net rates)
@@ -85,7 +101,7 @@ async function runE2ETest() {
   // -------------------------------------------------------------
   // Step 4: Render Proposal via Headless Playwright Chromium
   // -------------------------------------------------------------
-  console.log("[Step 4] Launching Playwright Chromium to render client PDF...");
+  console.log("[Step 4] Launching Playwright Chromium to render client PDF with HMAC print token...");
   const token = signRenderToken(itineraryId, 300);
 
   const browser = await chromium.launch({

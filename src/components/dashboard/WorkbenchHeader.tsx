@@ -135,6 +135,7 @@ export function WorkbenchHeader({
                 render={
                   <button
                     type="button"
+                    aria-label={user.name ? `User account: ${user.name}` : "User account menu"}
                     className="flex items-center gap-2 p-1 pl-1.5 rounded-lg border border-border hover:bg-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <Avatar className="size-8 bg-muted text-foreground font-semibold text-xs">

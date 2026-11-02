@@ -7,7 +7,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#fafaf7] flex flex-col justify-between text-[#091c3e] selection:bg-[#c92229] selection:text-white">
+    <div className="app-shell min-h-screen bg-[#fafaf7] flex flex-col justify-between text-[#091c3e] selection:bg-[#c92229] selection:text-white">
       {/* Editorial Top Bar */}
       <header className="w-full border-b border-slate-200/80 bg-white/70 backdrop-blur-md py-4 px-6 sm:px-10 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">

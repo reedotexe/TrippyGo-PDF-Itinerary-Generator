@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { uploadToStorage } from "@/lib/storage/s3";
 import { extractItinerary } from "@/lib/extraction/client";
+import { requireUser, toAuthResponse } from "@/lib/auth/guard";
 import {
   checkRateLimit,
   getClientIdentifier,
@@ -15,7 +16,8 @@ const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 MB limit
 export async function POST(req: NextRequest) {
   try {
     // 0. Rate limiting (10 requests/hour per client; relaxed in test/dev)
-    const clientId = getClientIdentifier(req);
+    const { user } = await requireUser(req);
+    const clientId = getClientIdentifier(req, user.id);
     const maxRequests = process.env.NODE_ENV === "production" ? 10 : 50;
     const rateCheck = checkRateLimit(`extract_${clientId}`, {
       maxRequests,
@@ -152,7 +154,8 @@ export async function POST(req: NextRequest) {
       { error: "Unsupported Content-Type. Expected 'application/json' or 'multipart/form-data'." },
       { status: 415 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.status) return toAuthResponse(error);
     console.error("[POST /api/extract] Internal server error:", error);
     return NextResponse.json(
       { error: "Internal server error during extraction.", details: (error as Error).message },

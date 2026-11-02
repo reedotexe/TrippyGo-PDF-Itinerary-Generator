@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser, toAuthResponse } from "@/lib/auth/guard";
 
 import {
   AeroAirport,
@@ -10,6 +11,12 @@ import {
 } from "@/lib/flights/airports";
 
 export async function GET(req: NextRequest) {
+  try {
+    await requireUser(req);
+  } catch (err: any) {
+    return toAuthResponse(err);
+  }
+
   const apiKey = process.env.AERODATABOX_API_KEY;
   if (!apiKey) {
     return NextResponse.json(

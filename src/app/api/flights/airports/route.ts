@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser, toAuthResponse } from "@/lib/auth/guard";
 import { AIRPORT_CODE_CITIES } from "@/lib/flights/airports";
 
 interface AirportSuggestion {
@@ -9,6 +10,12 @@ interface AirportSuggestion {
 }
 
 export async function GET(req: NextRequest) {
+  try {
+    await requireUser(req);
+  } catch (err: any) {
+    return toAuthResponse(err);
+  }
+
   const { searchParams } = new URL(req.url);
   const query = (searchParams.get("q") || "").trim().toLowerCase();
 

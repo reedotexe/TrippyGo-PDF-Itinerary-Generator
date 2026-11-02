@@ -61,8 +61,8 @@ export default function AdminSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center text-slate-700">
-        <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl border border-slate-200 shadow-xs">
+      <div className="flex items-center justify-center py-20 text-slate-700">
+        <div className="flex items-center gap-3 bg-card px-5 py-3 rounded-xl border border-border shadow-xs">
           <div className="w-5 h-5 border-2 border-[#c92229] border-t-transparent rounded-full animate-spin"></div>
           <span className="text-sm font-semibold">Loading agency settings...</span>
         </div>
@@ -72,18 +72,18 @@ export default function AdminSettingsPage() {
 
   if (!settings) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 text-slate-800">
-        <div className="bg-white p-8 rounded-2xl border border-red-200 shadow-sm text-center max-w-md">
+      <div className="flex items-center justify-center py-20 text-slate-800">
+        <div className="bg-card p-8 rounded-2xl border border-red-200 shadow-sm text-center max-w-md">
           <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3">
             <AlertTriangle className="w-6 h-6" />
           </div>
-          <h2 className="text-lg font-bold text-[#091c3e]">Failed to load configuration</h2>
-          <p className="text-xs text-slate-500 mt-1 mb-5">{error || "Unknown error occurred"}</p>
+          <h2 className="text-lg font-bold text-foreground">Failed to load configuration</h2>
+          <p className="text-xs text-muted-foreground mt-1 mb-5">{error || "Unknown error occurred"}</p>
           <Link
             href="/"
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg inline-flex items-center gap-2"
+            className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold rounded-lg inline-flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Proposals
+            <ArrowLeft className="w-4 h-4" /> Back to Workbench
           </Link>
         </div>
       </div>
@@ -91,63 +91,43 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans selection:bg-[#c92229] selection:text-white pb-16">
-      {/* Top Header */}
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              aria-label="Return to Dashboard"
-              title="Return to Dashboard"
-              className="p-2 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#091c3e]"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base tracking-tight text-[#091c3e]">
-                  Agency Settings
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                  Global Policy
-                </span>
-              </div>
-              <div className="text-xs text-slate-500">
-                Markup rules, GSTIN, tax modes, and compliance defaults
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleSave()}
-            disabled={saving}
-            aria-label="Save settings changes"
-            className="min-h-[38px] px-4 py-2 rounded-lg bg-[#c92229] hover:bg-[#b01d23] text-white text-xs sm:text-sm font-bold shadow-sm hover:shadow transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-[#c92229] focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Saving...</span>
-              </>
-            ) : savedSuccess ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                <span>Saved!</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Save Changes</span>
-              </>
-            )}
-          </button>
+    <div className="space-y-6">
+      {/* Top Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Commercial & Pricing Policy
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Configure default agency markups, margin floors, GST/TCS modes, and salesperson override permissions.
+          </p>
         </div>
-      </header>
 
-      {/* Main Form Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
+        <button
+          type="button"
+          onClick={() => handleSave()}
+          disabled={saving}
+          aria-label="Save settings changes"
+          className="min-h-[38px] px-4 py-2 rounded-lg bg-[#c92229] hover:bg-[#b01d23] text-white text-xs sm:text-sm font-bold shadow-sm hover:shadow transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-[#c92229] focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50 self-start sm:self-auto"
+        >
+          {saving ? (
+            <>
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Saving...</span>
+            </>
+          ) : savedSuccess ? (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+              <span>Saved!</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              <span>Save Changes</span>
+            </>
+          )}
+        </button>
+      </div>
         {savedSuccess && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center gap-2.5 shadow-xs">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -468,7 +448,6 @@ export default function AdminSettingsPage() {
             </div>
           </section>
         </form>
-      </main>
     </div>
   );
 }

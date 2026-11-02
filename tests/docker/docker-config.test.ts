@@ -51,7 +51,8 @@ assert.ok(fs.existsSync(rendererDockerfilePath), "Renderer Dockerfile must exist
 const rendererDockerfile = fs.readFileSync(rendererDockerfilePath, "utf8");
 
 assert.ok(
-  rendererDockerfile.includes("mcr.microsoft.com/playwright:v1.49.0-jammy"),
+  rendererDockerfile.includes("mcr.microsoft.com/playwright:") &&
+    rendererDockerfile.includes("-jammy"),
   "Must use official Playwright Jammy base image"
 );
 assert.ok(

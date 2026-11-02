@@ -1,3 +1,4 @@
+import { requireUser, toAuthResponse } from "@/lib/auth/guard";
 import { NextRequest, NextResponse } from "next/server";
 import {
   AeroFlightItem,
@@ -52,6 +53,12 @@ function calculateDuration(depTime: string, arrTime: string): string {
 }
 
 export async function GET(req: NextRequest) {
+  try {
+    await requireUser(req);
+  } catch (error: any) {
+    return toAuthResponse(error);
+  }
+
   const apiKey =
     process.env.AERODATABOX_API_KEY ||
     process.env.RAPIDAPI_KEY ||

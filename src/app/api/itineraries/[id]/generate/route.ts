@@ -8,14 +8,26 @@ import {
   getClientIdentifier,
   createRateLimitResponse,
 } from "@/lib/security/rate-limit";
+import { requireUser, toAuthResponse } from "@/lib/auth/guard";
+import { recordAuditEvent } from "@/lib/audit/logger";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // 0. Rate limiting (20 PDF generations / hour per client)
-    const clientId = getClientIdentifier(req);
+    // 1. Session verification & ownership check
+    const { user } = await requireUser(req);
+    const { id } = await params;
+
+    // Verify caller owns proposal (or is admin) - Anti-probing: 404 on unowned
+    const itinerary = await getItinerary(id, user);
+    if (!itinerary) {
+      return NextResponse.json({ error: "Itinerary not found" }, { status: 404 });
+    }
+
+    // 2. Per-user Rate Limiting (20 PDF generations / hour per client)
+    const clientId = getClientIdentifier(req, user.id);
     const maxRequests = process.env.NODE_ENV === "production" ? 20 : 100;
     const rateCheck = checkRateLimit(`generate_${clientId}`, {
       maxRequests,
@@ -26,20 +38,13 @@ export async function POST(
       return createRateLimitResponse(rateCheck.resetInSeconds);
     }
 
-    const { id } = await params;
-    const itinerary = await getItinerary(id);
-
-    if (!itinerary) {
-      return NextResponse.json({ error: "Itinerary not found" }, { status: 404 });
-    }
-
-    // Determine base URL from incoming request
+    // 3. Determine base URL from incoming request
     const protocol = req.headers.get("x-forwarded-proto") || "http";
     const host = req.headers.get("host") || "localhost:3000";
     const baseUrl = `${protocol}://${host}`;
 
     try {
-      // Execute Playwright rendering service
+      // Execute Playwright rendering service (HMAC signed internally)
       const renderResult = await renderItineraryToPdf(id, { baseUrl });
 
       // Direct PDF file download link with fallback to print view
@@ -51,6 +56,15 @@ export async function POST(
           // fallback to print route
         }
       }
+
+      await recordAuditEvent({
+        actorId: user.id,
+        action: "pdf.generate",
+        targetType: "itinerary",
+        targetId: id,
+        metadata: { versionNumber: renderResult.versionNumber, pdfJsonHash: renderResult.pdfJsonHash },
+        req,
+      });
 
       return NextResponse.json({
         success: true,
@@ -80,7 +94,10 @@ export async function POST(
         message: "Print link ready",
       });
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.status) {
+      return toAuthResponse(error);
+    }
     return NextResponse.json(
       { error: "Failed to generate PDF version", details: (error as Error).message },
       { status: 500 }

@@ -3,8 +3,9 @@ import { auth } from "../../src/lib/auth";
 import { authClient } from "../../src/lib/auth/client";
 import { toNextJsHandler } from "better-auth/next-js";
 import { sendEmail, sendInvitationEmail, sendPasswordResetEmail } from "../../src/lib/email/resend";
+import { recordAuditEvent, extractClientIp } from "../../src/lib/audit/logger";
 
-console.log("=== RUNNING PHASE 1 AUTHENTICATION CORE VERIFICATION SUITE ===\n");
+console.log("=== RUNNING PHASE 1 & PHASE 2 AUTH & AUDIT CORE VERIFICATION SUITE ===\n");
 
 async function runTests() {
   // 1. Verify Server Auth Instance
@@ -96,7 +97,30 @@ async function runTests() {
   assert.ok(shortPasswordRejected, "Passwords with fewer than 12 characters must be rejected");
   console.log("  -> Sub-12 character passwords strictly rejected by auth engine.");
 
-  console.log("\nPASS: ALL PHASE 1 AUTHENTICATION CORE VERIFICATIONS PASSED 100%!\n");
+  // 7. Verify Audit Logging Engine & Client IP Extraction (Phase 2)
+  console.log("[Test 7] Verifying Audit Logging Engine & IP extraction (Phase 2)...");
+  const mockReqWithForwarded = new Request("http://localhost:3000/api/itineraries", {
+    headers: { "x-forwarded-for": "203.0.113.195, 70.41.3.18" },
+  });
+  assert.equal(extractClientIp(mockReqWithForwarded), "203.0.113.195", "Must extract client IP from x-forwarded-for");
+
+  const mockReqWithRealIp = new Request("http://localhost:3000/api/itineraries", {
+    headers: { "x-real-ip": "198.51.100.1" },
+  });
+  assert.equal(extractClientIp(mockReqWithRealIp), "198.51.100.1", "Must extract client IP from x-real-ip");
+
+  // Record audit event
+  await recordAuditEvent({
+    actorId: "usr_test_agent_1",
+    action: "itinerary.create",
+    targetType: "itinerary",
+    targetId: "itn_phase2_verification",
+    metadata: { title: "Kashmir Luxury Tour", ownerId: "usr_test_agent_1" },
+    req: mockReqWithForwarded,
+  });
+  console.log("  -> Audit event dispatched cleanly and recorded to ledger.");
+
+  console.log("\nPASS: ALL AUTHENTICATION & AUDIT VERIFICATIONS PASSED 100%!\n");
 }
 
 runTests().catch((err) => {

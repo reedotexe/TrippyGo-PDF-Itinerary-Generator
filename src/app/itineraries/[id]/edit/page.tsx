@@ -364,7 +364,7 @@ function ItineraryEditorContent() {
   const reviewFlags = itinerary.meta?.reviewFlags || [];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 font-sans antialiased text-slate-800">
+    <div className="app-shell min-h-screen flex flex-col bg-slate-100 font-sans antialiased text-slate-800">
       {/* TOP COMMAND BAR */}
       <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-white px-4 py-2.5 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">

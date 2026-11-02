@@ -1,0 +1,259 @@
+{
+  "users": {
+    "usr_admin_1": {
+      "id": "usr_admin_1",
+      "name": "Agency Administrator",
+      "email": "admin@trippygo.com",
+      "role": "admin",
+      "banned": false,
+      "createdAt": "2026-11-02T05:27:26.211Z",
+      "updatedAt": "2026-11-02T05:27:26.211Z"
+    },
+    "usr_sales_1": {
+      "id": "usr_sales_1",
+      "name": "Vikram Malhotra",
+      "email": "sales@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:27:26.211Z",
+      "updatedAt": "2026-11-02T06:56:34.422Z",
+      "password": "NewSecurePassword123!"
+    },
+    "usr_59a48ebc": {
+      "id": "usr_59a48ebc",
+      "name": "Advisor mvythogi",
+      "email": "advisor_mvythogi@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:27:26.265Z",
+      "updatedAt": "2026-11-02T05:27:26.265Z"
+    },
+    "usr_6548616e": {
+      "id": "usr_6548616e",
+      "name": "Bob Agent mvythogi",
+      "email": "bob_mvythogi@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:27:26.532Z",
+      "updatedAt": "2026-11-02T05:27:26.532Z"
+    },
+    "usr_9b289a0f": {
+      "id": "usr_9b289a0f",
+      "name": "Advisor mvytj9c8",
+      "email": "advisor_mvytj9c8@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:28:39.977Z",
+      "updatedAt": "2026-11-02T05:28:39.977Z"
+    },
+    "usr_ada6784e": {
+      "id": "usr_ada6784e",
+      "name": "Bob Agent mvytj9c8",
+      "email": "bob_mvytj9c8@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:28:40.237Z",
+      "updatedAt": "2026-11-02T05:28:40.237Z"
+    },
+    "usr_d2fad58a": {
+      "id": "usr_d2fad58a",
+      "name": "Advisor mvytqly5",
+      "email": "advisor_mvytqly5@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:34:22.913Z",
+      "updatedAt": "2026-11-02T05:34:22.913Z"
+    },
+    "usr_728aec1d": {
+      "id": "usr_728aec1d",
+      "name": "Bob Agent mvytqly5",
+      "email": "bob_mvytqly5@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:34:23.383Z",
+      "updatedAt": "2026-11-02T05:34:23.383Z"
+    },
+    "usr_729c7bae": {
+      "id": "usr_729c7bae",
+      "name": "Advisor mvytswid",
+      "email": "advisor_mvytswid@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:36:09.913Z",
+      "updatedAt": "2026-11-02T05:36:09.913Z"
+    },
+    "usr_6d33ed94": {
+      "id": "usr_6d33ed94",
+      "name": "Bob Agent mvytswid",
+      "email": "bob_mvytswid@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:36:10.212Z",
+      "updatedAt": "2026-11-02T05:36:10.212Z"
+    },
+    "usr_eb441485": {
+      "id": "usr_eb441485",
+      "name": "Advisor mvytt7z5",
+      "email": "advisor_mvytt7z5@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:36:24.768Z",
+      "updatedAt": "2026-11-02T05:36:24.768Z"
+    },
+    "usr_fbbb354e": {
+      "id": "usr_fbbb354e",
+      "name": "Bob Agent mvytt7z5",
+      "email": "bob_mvytt7z5@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:36:25.136Z",
+      "updatedAt": "2026-11-02T05:36:25.136Z"
+    },
+    "usr_5b5fef2e": {
+      "id": "usr_5b5fef2e",
+      "name": "Advisor mvytv7u5",
+      "email": "advisor_mvytv7u5@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:37:57.899Z",
+      "updatedAt": "2026-11-02T05:37:57.899Z"
+    },
+    "usr_d129ad62": {
+      "id": "usr_d129ad62",
+      "name": "Bob Agent mvytv7u5",
+      "email": "bob_mvytv7u5@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:37:58.247Z",
+      "updatedAt": "2026-11-02T05:37:58.247Z"
+    },
+    "usr_47f5d89c": {
+      "id": "usr_47f5d89c",
+      "name": "Advisor mvyu5c2e",
+      "email": "advisor_mvyu5c2e@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:45:49.944Z",
+      "updatedAt": "2026-11-02T05:45:49.944Z"
+    },
+    "usr_49ce858d": {
+      "id": "usr_49ce858d",
+      "name": "Bob Agent mvyu5c2e",
+      "email": "bob_mvyu5c2e@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:45:50.217Z",
+      "updatedAt": "2026-11-02T05:45:50.217Z"
+    },
+    "usr_9e22459a": {
+      "id": "usr_9e22459a",
+      "name": "Advisor mvyuchpx",
+      "email": "advisor_mvyuchpx@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:51:23.862Z",
+      "updatedAt": "2026-11-02T05:51:23.862Z"
+    },
+    "usr_ca1c715f": {
+      "id": "usr_ca1c715f",
+      "name": "Bob Agent mvyuchpx",
+      "email": "bob_mvyuchpx@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T05:51:24.241Z",
+      "updatedAt": "2026-11-02T05:51:24.241Z"
+    },
+    "usr_8d3f303e": {
+      "id": "usr_8d3f303e",
+      "name": "Advisor mvyuvfo7",
+      "email": "advisor_mvyuvfo7@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T06:06:07.671Z",
+      "updatedAt": "2026-11-02T06:06:07.671Z"
+    },
+    "usr_9c94c268": {
+      "id": "usr_9c94c268",
+      "name": "Bob Agent mvyuvfo7",
+      "email": "bob_mvyuvfo7@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T06:06:07.939Z",
+      "updatedAt": "2026-11-02T06:06:07.939Z"
+    },
+    "usr_3f6107ed": {
+      "id": "usr_3f6107ed",
+      "name": "Reedham",
+      "email": "reedham.sh@gmail.com",
+      "role": "salesperson",
+      "banned": true,
+      "createdAt": "2026-11-02T06:22:03.316Z",
+      "updatedAt": "2026-11-02T06:47:30.997Z",
+      "banReason": "Deactivated by administrator"
+    },
+    "usr_c4b7ae43": {
+      "id": "usr_c4b7ae43",
+      "name": "Reedham 2",
+      "email": "reereeree369@gmail.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T06:48:20.404Z",
+      "updatedAt": "2026-11-02T07:01:55.552Z",
+      "password": "SZrq89Yr9Gt5Yvr"
+    },
+    "usr_8ee47258": {
+      "id": "usr_8ee47258",
+      "name": "Advisor mvywpe3l",
+      "email": "advisor_mvywpe3l@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T06:57:25.071Z",
+      "updatedAt": "2026-11-02T06:57:25.071Z"
+    },
+    "usr_73635f45": {
+      "id": "usr_73635f45",
+      "name": "Bob Agent mvywpe3l",
+      "email": "bob_mvywpe3l@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T06:57:25.358Z",
+      "updatedAt": "2026-11-02T06:57:25.358Z"
+    },
+    "usr_7ada0001": {
+      "id": "usr_7ada0001",
+      "name": "Advisor mvz1r1oj",
+      "email": "advisor_mvz1r1oj@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T09:18:40.285Z",
+      "updatedAt": "2026-11-02T09:18:40.285Z"
+    },
+    "usr_a03fe575": {
+      "id": "usr_a03fe575",
+      "name": "Bob Agent mvz1r1oj",
+      "email": "bob_mvz1r1oj@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T09:18:40.651Z",
+      "updatedAt": "2026-11-02T09:18:40.651Z"
+    },
+    "usr_647896b9": {
+      "id": "usr_647896b9",
+      "name": "Advisor mvz23m6u",
+      "email": "advisor_mvz23m6u@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T09:28:26.719Z",
+      "updatedAt": "2026-11-02T09:28:26.719Z"
+    },
+    "usr_2756072d": {
+      "id": "usr_2756072d",
+      "name": "Bob Agent mvz23m6u",
+      "email": "bob_mvz23m6u@trippygo.com",
+      "role": "salesperson",
+      "banned": false,
+      "createdAt": "2026-11-02T09:28:26.985Z",
+      "updatedAt": "2026-11-02T09:28:26.985Z"
+    }
+  }
+}

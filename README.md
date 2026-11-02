@@ -121,6 +121,8 @@ TrippyGo separates the high-frequency interactive Next.js web application from t
 | **Language** | TypeScript | `^5` | Full-stack strict type safety |
 | **Styling** | Tailwind CSS | `^4.0` | Token-driven CSS, print stylesheets, zero runtime CSS |
 | **Database** | PostgreSQL + Drizzle ORM | `pg ^8.23`, `drizzle ^0.45` | Relational persistence with instant schema migrations |
+| **Authentication** | Better Auth + Drizzle Adapter | `better-auth ^1.7` | Role-based access control, session security, anti-probing |
+| **Transactional Email** | Resend SDK | `resend ^6.37` | Staff invitations and password reset flows with dev fallback |
 | **AI Extraction** | Google Gen AI + Anthropic SDK | `@google/genai`, `@anthropic-ai/sdk` | Structured document parsing |
 | **PDF Rendering** | Playwright Chromium | `^1.64.1` | Headless print rendering to exact A4 dimensions |
 | **Object Storage** | AWS S3 SDK v3 | `@aws-sdk/client-s3` | Storing rendered client PDFs and uploaded supplier files |
@@ -150,6 +152,10 @@ cp .env.example .env.local
 | `S3_SECRET_ACCESS_KEY` | No | `...` | AWS or MinIO Secret Key |
 | `S3_ENDPOINT` | No | `http://localhost:9000` | Leave empty for AWS; set for MinIO or Cloudflare R2 |
 | `INTERNAL_RENDER_SECRET` | **Yes** | `(random 32+ char string)` | Cryptographic secret for signing HMAC print tokens |
+| `BETTER_AUTH_SECRET` | **Yes** | `(random 32+ char string)` | Cryptographic secret for signing user session tokens |
+| `BETTER_AUTH_URL` | **Yes** | `http://localhost:3000` | Canonical auth base URL |
+| `RESEND_API_KEY` | Optional | `re_...` | Resend API key for transactional emails (falls back to terminal) |
+| `EMAIL_FROM` | No | `TrippyGo <operations@trippygo.com>` | Sender address for team invites & password resets |
 | `RENDERER_SERVICE_URL` | No | `http://localhost:3001` | Microservice URL. If omitted, uses embedded Chromium |
 | `NEXT_PUBLIC_APP_URL` | **Yes** | `http://localhost:3000` | Canonical app URL |
 | `UNSPLASH_ACCESS_KEY` | No | `...` | Stock photography search |
@@ -188,7 +194,10 @@ cp .env.example .env.local
 # - INTERNAL_RENDER_SECRET=dev-secret-key-must-be-at-least-32-characters-long
 # - NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# 5. Start development server with Turbopack hot reload
+# 5. Seed initial admin & salesperson accounts
+npm run db:seed:auth
+
+# 6. Start development server with Turbopack hot reload
 npm run dev
 ```
 
@@ -210,6 +219,9 @@ docker compose up --build
 
 # 3. Apply database migrations (first launch only)
 docker compose exec web npx drizzle-kit migrate
+
+# 4. Seed admin and salesperson accounts
+docker compose exec web npm run db:seed:auth
 ```
 
 - **Web App:** `http://localhost:3000`
@@ -345,7 +357,10 @@ sudo certbot --nginx -d itineraries.youragency.com
 - [x] **Renderer Process Isolation:** The renderer runs in a sandboxed microservice container; Chromium failures cannot corrupt web processes.
 - [x] **Zero-Leak Client Projection:** The `computeClientView()` function runs automatically prior to rendering and state distribution.
 - [x] **HMAC Render Signing:** The `/print/[id]` template route rejects requests missing valid time-stamped signatures.
-- [x] **Rate Limiting:** Enforces strict per-IP rate limits on AI extraction (`10/hr`), PDF rendering (`20/hr`), and photo search (`100/hr`).
+- [x] **Rate Limiting:** Enforces strict per-user/per-IP rate limits on AI extraction (`10/hr`), PDF rendering (`20/hr`), and photo search (`100/hr`).
+- [x] **404 Anti-Probing Guarantee:** Requests for unowned proposals by sales staff strictly return `404 Not Found` (never `403 Forbidden`) to eliminate ID probing.
+- [x] **Last Active Admin Protection:** API and DB constraints prevent demoting or deactivating the last active administrator.
+- [x] **Append-Only Audit Ledger:** Sensitive operations (`itinerary.create`, `itinerary.update`, `itinerary.soft_delete`, `itinerary.restore`, `itinerary.reassign`, `pdf.generate`, `user.invite`, `user.ban`) recorded to immutable audit ledger.
 
 ---
 
@@ -364,6 +379,7 @@ npm test
 | :--- | :--- | :--- |
 | `npm run test:unit` | **Pricing & Schema** | Verifies paise math, margin floor checks, GST modes, and v0 ➔ v1 migration |
 | `npm run test:dates` | **Calendar Engine** | Tests Asia/Kolkata timezone rollover, leap years, and cross-month itineraries |
+| `npm run test:auth` | **Auth & 404 Anti-Probing** | Verifies RBAC, 404 anti-probing, proposal reassignment, and admin safety |
 | `npm run test:security` | **Security Audit** | Scans client files for secret leaks, tests 10MB upload limits and SSRF defenses |
 | `npm run test:docker` | **DevOps Audit** | Verifies container healthcheck configurations, resource limits, and Next standalone output |
 | `npm run test:leak` | **PDF Binary Leak** | Renders actual PDF and parses binary stream to assert zero supplier net rate leakage |

@@ -288,6 +288,16 @@ export function migrateItinerarySchema(raw: unknown): Itinerary {
     }
   }
 
+  // -----------------------------------------------------------------
+  // Migration to v2: Ownership & Access Control Metadata
+  // -----------------------------------------------------------------
+  if (!doc.schemaVersion || doc.schemaVersion < 2) {
+    doc.schemaVersion = 2;
+  }
+  if (!doc.ownership || typeof doc.ownership !== "object") {
+    doc.ownership = {};
+  }
+
   // Validate resulting structure against single source of truth Zod schema
   return ItinerarySchema.parse(doc);
 }

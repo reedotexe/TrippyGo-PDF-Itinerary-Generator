@@ -325,10 +325,20 @@ export const FlightLegSchema = z.object({
 export type FlightLeg = z.infer<typeof FlightLegSchema>;
 
 /**
+ * Proposal Ownership & Assignment Metadata (Phase 2)
+ */
+export const OwnershipMetadataSchema = z.object({
+  ownerId: z.string().optional(),
+  ownerName: z.string().optional(),
+  createdBy: z.string().optional(),
+});
+export type OwnershipMetadata = z.infer<typeof OwnershipMetadataSchema>;
+
+/**
  * Root Itinerary Schema - Single Source of Truth
  */
 export const ItinerarySchema = z.object({
-  schemaVersion: z.literal(1).default(1),
+  schemaVersion: z.union([z.literal(1), z.literal(2)]).default(2),
   package: PackageSchema,
   days: z.array(DaySchema).min(1, "Itinerary must contain at least one day"),
   flights: z.array(FlightLegSchema).optional(),
@@ -339,6 +349,7 @@ export const ItinerarySchema = z.object({
   meta: MetaSchema.default({ sourceFile: null, extractedBy: null, reviewFlags: [], extractedSnapshot: null, tokenUsage: null }),
   variants: z.array(VariantSchema).default([]),
   salesperson: SalespersonContactSchema.optional(),
+  ownership: OwnershipMetadataSchema.optional(),
 });
 
 export type Itinerary = z.infer<typeof ItinerarySchema>;

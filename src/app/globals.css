@@ -64,8 +64,17 @@
 }
 
 .app-shell ::selection {
-  background-color: #c92229;
-  color: #ffffff;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Exclude preview and print containers so they keep their original selection colour */
+.preview-pane ::selection,
+.print-container ::selection,
+.preview-container ::selection,
+iframe ::selection {
+  background-color: revert;
+  color: revert;
 }
 
 @media print {

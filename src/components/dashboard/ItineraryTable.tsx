@@ -92,6 +92,7 @@ interface ItineraryTableProps {
   totalPages: number;
   totalItems: number;
   onPageChange: (page: number) => void;
+  isAdmin?: boolean;
 }
 
 export function ItineraryTable({
@@ -104,6 +105,7 @@ export function ItineraryTable({
   totalPages,
   totalItems,
   onPageChange,
+  isAdmin = false,
 }: ItineraryTableProps) {
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<ItinerarySummary | null>(null);
@@ -456,7 +458,10 @@ export function ItineraryTable({
             <DialogTitle>Move itinerary to trash?</DialogTitle>
             <DialogDescription>
               &ldquo;{deleteTarget?.title || "This itinerary"}&rdquo; will be moved to
-              trash. You can restore it later from Trash.
+              trash.{" "}
+              {isAdmin
+                ? "You can restore it later from Trash."
+                : "If you need to restore it later, ask an administrator."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
