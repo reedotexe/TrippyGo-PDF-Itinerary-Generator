@@ -345,7 +345,7 @@ export function ItineraryTable({
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Updated {formatRelativeTime(item.updatedAt)}
                 </span>
 
