@@ -1,17 +1,30 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
-  X,
-  FileUp,
+  UploadCloud,
   FileText,
   FilePlus,
-  UploadCloud,
   ArrowRight,
   Sparkles,
   AlertCircle,
   FileCheck,
+  ShieldCheck,
+  Loader2,
+  X,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { KASHMIR_SAMPLE_TOUR } from "@/lib/constants/sample-tour";
 
 interface NewItineraryModalProps {
   isOpen: boolean;
@@ -30,91 +43,53 @@ export function NewItineraryModal({
   isProcessing,
   errorMsg,
 }: NewItineraryModalProps) {
-  const [activeTab, setActiveTab] = useState<"upload" | "paste" | "blank">("upload");
+  const [activeTab, setActiveTab] = useState<string>("upload");
   const [pastedText, setPastedText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen && !isProcessing) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isProcessing, onClose]);
-
-  if (!isOpen) return null;
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    setFileError(null);
     const file = e.dataTransfer.files?.[0];
-    if (file && (file.type === "application/pdf" || file.name.endsWith(".txt") || file.name.endsWith(".pdf"))) {
+    if (file) {
+      const isPdfOrTxt =
+        file.type === "application/pdf" ||
+        file.type === "text/plain" ||
+        file.name.endsWith(".txt") ||
+        file.name.endsWith(".pdf");
+
+      if (!isPdfOrTxt) {
+        setFileError("Please select a PDF or text file.");
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        setFileError("File size exceeds 10 MB limit.");
+        return;
+      }
+
       setSelectedFile(file);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setFileError("File size exceeds 10 MB limit.");
+        return;
+      }
       setSelectedFile(file);
     }
   };
 
-  const handleLoadKashmirSample = () => {
-    const kashmirText = `SUPPLIER: Royal Kashmir Holidays
-Package: Kashmir Paradise Tour
-Duration: 6 Nights / 7 Days
-
-DAY 1: ARRIVAL SRINAGAR - LOCAL SIGHTSEEING
-Meet & greet at Srinagar airport. Transfer to luxury houseboat at Dal Lake.
-Afternoon Shikara ride visiting Floating Gardens and Char Chinar.
-Dinner & overnight stay at Houseboat (Dal Lake).
-
-DAY 2: SRINAGAR TO SONAMARG DAY EXCURSION
-Drive to Sonamarg (Meadow of Gold). Enjoy Thajiwas Glacier pony ride.
-Dinner & overnight stay at Hotel Grand Boulevard, Srinagar.
-
-DAY 3: SRINAGAR - GULMARG
-Board Gulmarg Gondola Phase 1 & 2 up to Apharwat Peak.
-Dinner & overnight stay at Hotel Pine Spring, Gulmarg.
-
-DAY 4: GULMARG TO PAHALGAM
-Drive to Pahalgam via Pampore saffron fields.
-Dinner & overnight stay at Hotel Heevan, Pahalgam.
-
-DAY 5: PAHALGAM VALLEY SIGHTSEEING
-Visit Betaab Valley, Aru Valley, and Chandanwari.
-Dinner & overnight stay at Hotel Heevan, Pahalgam.
-
-DAY 6: PAHALGAM TO SRINAGAR
-Mughal Gardens: Nishat Bagh and Shalimar Bagh.
-Dinner & overnight stay at Hotel Grand Boulevard, Srinagar.
-
-DAY 7: DEPARTURE SRINAGAR AIRPORT
-Breakfast and transfer to Srinagar Airport.
-
-INCLUSIONS:
-- 01 Night Houseboat Srinagar
-- 02 Nights Grand Boulevard Srinagar
-- 01 Night Pine Spring Gulmarg
-- 02 Nights Heevan Pahalgam
-- Daily Breakfast and Dinner (MAP plan)
-- All transfers by private Innova Crysta
-
-EXCLUSIONS:
-- Airfare
-- Gondola tickets Phase 1 & 2
-- Personal expenses
-
-NET SUPPLIER PRICE:
-INR 52,000/- Total for couple net.`;
-
-    setPastedText(kashmirText);
+  const handleLoadSample = () => {
+    setPastedText(KASHMIR_SAMPLE_TOUR);
     setActiveTab("paste");
   };
 
@@ -130,232 +105,217 @@ INR 52,000/- Total for couple net.`;
     }
   };
 
+  const isSubmitDisabled =
+    isProcessing ||
+    (activeTab === "upload" && !selectedFile) ||
+    (activeTab === "paste" && !pastedText.trim());
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !isProcessing) {
+          onClose();
+        }
+      }}
     >
-      <div
-        className="relative bg-white w-full max-w-2xl rounded-2xl border border-slate-200 shadow-2xl overflow-hidden transition-all"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/75">
-          <div>
-            <h2 id="modal-title" className="text-lg font-bold text-[#091c3e]">
-              Create New Itinerary
-            </h2>
-            <p className="text-xs text-slate-500">
-              Parse raw supplier notes into a client-ready proposal with AI
-            </p>
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>New itinerary</DialogTitle>
+          <DialogDescription>
+            Upload a supplier quote or paste a message. We&apos;ll draft the itinerary for you to review.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Global Error Banner */}
+        {(errorMsg || fileError) && (
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive flex items-start gap-2">
+            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <div>{errorMsg || fileError}</div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isProcessing}
-            aria-label="Close modal"
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/60 transition disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        )}
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 px-6 bg-white gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("upload")}
-            className={`py-3 px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition ${
-              activeTab === "upload"
-                ? "border-[#c92229] text-[#c92229]"
-                : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <FileUp className="w-4 h-4" />
-            Upload PDF / Doc
-          </button>
+        {/* Mode Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="upload" className="gap-1.5 text-xs">
+              <UploadCloud className="size-3.5" />
+              Upload quote
+            </TabsTrigger>
+            <TabsTrigger value="paste" className="gap-1.5 text-xs">
+              <FileText className="size-3.5" />
+              Paste text
+            </TabsTrigger>
+            <TabsTrigger value="blank" className="gap-1.5 text-xs">
+              <FilePlus className="size-3.5" />
+              Start blank
+            </TabsTrigger>
+          </TabsList>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("paste")}
-            className={`py-3 px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition ${
-              activeTab === "paste"
-                ? "border-[#c92229] text-[#c92229]"
-                : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            Paste WhatsApp / Text
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("blank")}
-            className={`py-3 px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition ${
-              activeTab === "blank"
-                ? "border-[#c92229] text-[#c92229]"
-                : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <FilePlus className="w-4 h-4" />
-            Start Blank
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-6 space-y-4">
-          {errorMsg && (
-            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <div>{errorMsg}</div>
-            </div>
-          )}
-
-          {activeTab === "upload" && (
-            <div className="space-y-3">
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={() => setIsDragOver(false)}
-                onDrop={handleFileDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-                  isDragOver
-                    ? "border-[#c92229] bg-red-50/40"
-                    : selectedFile
-                    ? "border-emerald-500 bg-emerald-50/30"
-                    : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.txt"
-                  aria-label="Upload supplier quote PDF or text file"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-
-                {selectedFile ? (
-                  <div className="space-y-2">
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                      <FileCheck className="w-6 h-6" />
-                    </div>
-                    <div className="text-sm font-bold text-slate-800">{selectedFile.name}</div>
-                    <div className="text-xs text-slate-500">
-                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Ready to extract
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFile(null);
-                      }}
-                      className="text-xs text-red-600 hover:underline pt-1"
-                    >
-                      Remove file
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                      <UploadCloud className="w-6 h-6" />
-                    </div>
-                    <div className="text-sm font-bold text-slate-700">
-                      Drop supplier PDF here or click to browse
-                    </div>
-                    <div className="text-xs text-slate-500">Supports PDF or TXT up to 50 MB</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "paste" && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700">
-                  Paste WhatsApp or DMC Supplier Quotation:
-                </span>
-                <button
-                  type="button"
-                  onClick={handleLoadKashmirSample}
-                  className="text-[#c92229] hover:underline font-semibold flex items-center gap-1"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Load Sample Kashmir Tour
-                </button>
-              </div>
-
-              <textarea
-                rows={7}
-                value={pastedText}
-                onChange={(e) => setPastedText(e.target.value)}
-                placeholder="Paste itinerary text, inclusions, day plans, or net rates here..."
-                aria-label="Pasted supplier itinerary quotation"
-                className="w-full p-3.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#091c3e] focus-visible:ring-2 focus-visible:ring-[#091c3e]/20 leading-relaxed font-sans"
+          {/* 1. Upload Quote Tab */}
+          <TabsContent value="upload" className="pt-4 space-y-3">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleFileDrop}
+              className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors ${
+                isDragOver
+                  ? "border-primary bg-primary/5"
+                  : selectedFile
+                  ? "border-border bg-muted/30"
+                  : "border-border hover:border-muted-foreground/30 bg-muted/10"
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt"
+                aria-label="Upload supplier quote PDF or text file"
+                onChange={handleFileSelect}
+                className="hidden"
               />
-            </div>
-          )}
 
-          {activeTab === "blank" && (
-            <div className="p-6 text-center bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-3">
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-                <FilePlus className="w-6 h-6" />
+              {selectedFile ? (
+                <div className="space-y-2">
+                  <div className="size-10 rounded-full bg-muted flex items-center justify-center mx-auto text-foreground">
+                    <FileCheck className="size-5" />
+                  </div>
+                  <div className="text-sm font-medium text-foreground truncate max-w-sm mx-auto">
+                    {selectedFile.name}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB · Ready to draft
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedFile(null)}
+                    className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2"
+                  >
+                    <X className="size-3 mr-1" />
+                    Remove file
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="size-10 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+                    <UploadCloud className="size-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-foreground">
+                      Drag and drop supplier quote
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      PDF or text (up to 10 MB)
+                    </div>
+                  </div>
+                  <div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Browse files
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* 2. Paste Text Tab */}
+          <TabsContent value="paste" className="pt-4 space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-muted-foreground">
+                Paste WhatsApp message or supplier notes
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleLoadSample}
+                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+              >
+                <Sparkles className="size-3 text-muted-foreground" />
+                Load sample quote
+              </Button>
+            </div>
+
+            <Textarea
+              rows={8}
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder="Paste supplier quote, WhatsApp message, day plans, or hotel details here..."
+              aria-label="Pasted supplier itinerary quotation"
+              className="font-sans text-xs sm:text-sm bg-background border-border"
+            />
+          </TabsContent>
+
+          {/* 3. Start Blank Tab */}
+          <TabsContent value="blank" className="pt-4 space-y-3">
+            <div className="p-6 text-center bg-muted/20 border border-border rounded-lg space-y-2">
+              <div className="size-10 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+                <FilePlus className="size-5" />
               </div>
-              <h3 className="text-sm font-bold text-[#091c3e]">Create from scratch</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Initialize an empty proposal. You can manually enter days, hotel selections,
-                pricing, and flight legs in the live editor.
+              <h3 className="text-sm font-semibold text-foreground">
+                Start with an empty itinerary
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                Initialize an empty proposal. You can manually configure destinations, dates, hotels,
+                flights, and pricing in the editor.
               </p>
             </div>
-          )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Confidentiality Reassurance Line (Mandatory per Section 10) */}
+        <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/40 border border-border/60 text-xs text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0 text-muted-foreground" />
+          <span>Supplier net rates are never shown to clients.</span>
         </div>
 
-        {/* Modal Footer */}
-        <div className="px-6 py-4 bg-slate-50/75 border-t border-slate-200 flex items-center justify-between">
-          <button
+        {/* Footer */}
+        <DialogFooter className="flex flex-row items-center justify-between sm:justify-between gap-2 pt-2 border-t border-border">
+          <Button
             type="button"
+            variant="outline"
             onClick={onClose}
             disabled={isProcessing}
-            className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 rounded-lg"
           >
             Cancel
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="default"
             onClick={handleSubmit}
-            disabled={
-              isProcessing ||
-              (activeTab === "upload" && !selectedFile) ||
-              (activeTab === "paste" && !pastedText.trim())
-            }
-            className="px-5 py-2.5 bg-[#c92229] hover:bg-[#b01d23] text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:shadow transition flex items-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[#c92229]"
+            disabled={isSubmitDisabled}
+            className="gap-1.5"
           >
             {isProcessing ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Parsing with Claude AI...
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>Drafting proposal...</span>
               </>
             ) : activeTab === "blank" ? (
               <>
-                Open Blank Editor
-                <ArrowRight className="w-4 h-4" />
+                <span>Create blank itinerary</span>
+                <ArrowRight className="size-3.5" />
               </>
             ) : (
               <>
-                Extract & Open Editor
-                <ArrowRight className="w-4 h-4" />
+                <span>Create itinerary</span>
+                <ArrowRight className="size-3.5" />
               </>
             )}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
