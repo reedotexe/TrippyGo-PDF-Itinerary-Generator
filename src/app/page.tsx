@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { useSession } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkbenchHeader } from "@/components/dashboard/WorkbenchHeader";
 import { WorkbenchMetrics } from "@/components/dashboard/WorkbenchMetrics";
 import { ItineraryTable } from "@/components/dashboard/ItineraryTable";
@@ -256,16 +257,14 @@ export default function HomePage() {
         searchInputRef={searchInputRef}
       />
 
-      {/* Metrics Bar */}
-      <WorkbenchMetrics
-        totalCount={metrics.totalCount}
-        draftCount={metrics.draftCount}
-        generatedCount={metrics.generatedCount}
-        totalPipelinePaise={metrics.totalPipelinePaise}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        isAdmin={isAdmin}
-      />
+      {/* Metrics Bar (Admin Only) */}
+      {isAdmin && (
+        <WorkbenchMetrics
+          draftCount={metrics.draftCount}
+          generatedCount={metrics.generatedCount}
+          isAdmin={isAdmin}
+        />
+      )}
 
       {/* Main Workspace Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -301,37 +300,57 @@ export default function HomePage() {
             onLoadSample={handleLoadKashmirSample}
             isProcessing={isProcessing}
           />
-        ) : filteredItineraries.length === 0 && !isLoading ? (
-          <WorkbenchEmptyState
-            isSearchEmpty={true}
-            searchQuery={searchQuery}
-            onClearSearch={() => {
-              setSearchQuery("");
-              setStatusFilter("all");
-            }}
-            onOpenNewModal={() => setIsNewModalOpen(true)}
-            onLoadSample={handleLoadKashmirSample}
-            isProcessing={isProcessing}
-          />
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h1 className="text-xl font-semibold text-foreground tracking-tight">
                 Proposals
               </h1>
+
+              <Tabs
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                className="self-start sm:self-auto"
+              >
+                <TabsList variant="default">
+                  <TabsTrigger value="all">
+                    All ({metrics.totalCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="draft">
+                    Drafts ({metrics.draftCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="generated">
+                    PDF ready ({metrics.generatedCount})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
 
-            <ItineraryTable
-              itineraries={paginatedItineraries}
-              isLoading={isLoading}
-              onDelete={handleDelete}
-              onDuplicate={handleDuplicate}
-              isDeletingId={deletingId}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredItineraries.length}
-              onPageChange={setCurrentPage}
-            />
+            {filteredItineraries.length === 0 && !isLoading ? (
+              <WorkbenchEmptyState
+                isSearchEmpty={true}
+                searchQuery={searchQuery}
+                onClearSearch={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                }}
+                onOpenNewModal={() => setIsNewModalOpen(true)}
+                onLoadSample={handleLoadKashmirSample}
+                isProcessing={isProcessing}
+              />
+            ) : (
+              <ItineraryTable
+                itineraries={paginatedItineraries}
+                isLoading={isLoading}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
+                isDeletingId={deletingId}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredItineraries.length}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </div>
         )}
       </main>
