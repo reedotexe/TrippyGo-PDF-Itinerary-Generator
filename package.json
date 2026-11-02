@@ -10,21 +10,24 @@
     "test": "npm run test:unit && npm run test:dates && npm run test:security && npm run test:docker && npm run test:leak && npm run test:visual && npm run test:e2e",
     "test:unit": "tsx src/lib/pricing.test.ts && tsx src/lib/schema/migrate.test.ts",
     "test:dates": "tsx src/lib/utils/dates.test.ts",
-    "test:security": "tsx tests/security/api-keys.test.ts && tsx tests/security/upload-validation.test.ts && tsx tests/security/rate-limit.test.ts && tsx tests/security/network-isolation.test.ts",
+    "test:security": "tsx tests/security/api-keys.test.ts && tsx tests/security/upload-validation.test.ts && tsx tests/security/rate-limit.test.ts && tsx tests/security/network-isolation.test.ts && tsx tests/security/auth-core.test.ts",
     "test:docker": "tsx tests/docker/docker-config.test.ts",
     "test:extraction": "tsx scripts/test-extraction.ts",
     "test:leak": "tsx scripts/test-pricing-leak.ts",
     "test:visual": "tsx scripts/test-visual-regression.ts",
-    "test:e2e": "tsx tests/e2e/itinerary-flow.test.ts"
+    "test:e2e": "tsx tests/e2e/itinerary-flow.test.ts",
+    "db:seed:auth": "tsx scripts/seed-admin.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.87",
     "@anthropic-ai/sdk": "^1.3.0",
     "@aws-sdk/client-s3": "^3.1156.0",
     "@aws-sdk/s3-request-presigner": "^3.1156.0",
+    "@better-auth/drizzle-adapter": "^1.7.15",
     "@google/genai": "^2.31.0",
     "@neondatabase/serverless": "^1.2.0",
     "ai": "^7.0.152",
+    "better-auth": "^1.7.15",
     "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.61.0",
     "next": "16.4.3",
@@ -35,6 +38,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-easy-crop": "^6.2.4",
+    "resend": "^6.37.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
