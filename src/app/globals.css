@@ -60,6 +60,7 @@
   --warning-foreground: oklch(0.2 0.05 70);
   --success: oklch(0.627 0.194 149.214);
   --success-foreground: oklch(0.98 0.01 149);
+  --success-text: oklch(0.45 0.16 149.214);
 }
 
 .app-shell ::selection {
@@ -127,6 +128,7 @@
   --color-warning: var(--warning);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
+  --color-success-text: var(--success-text);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
