@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -170,9 +171,13 @@ export function ItineraryTable({
                 >
                   {/* Proposal & Client */}
                   <TableCell className="py-3.5 px-3 sm:px-4">
-                    <div className="font-semibold text-foreground hover:underline truncate max-w-[180px] lg:max-w-xs">
+                    <Link
+                      href={`/itineraries/${item.id}/edit`}
+                      className="font-semibold text-foreground hover:underline truncate max-w-[180px] lg:max-w-xs block focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-xs"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {item.title}
-                    </div>
+                    </Link>
                     <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[180px] lg:max-w-xs">
                       {item.guestName ? `Client: ${item.guestName}` : "—"}
                     </div>
@@ -317,9 +322,13 @@ export function ItineraryTable({
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="font-semibold text-foreground text-sm hover:underline">
+                  <Link
+                    href={`/itineraries/${item.id}/edit`}
+                    className="font-semibold text-foreground text-sm hover:underline block focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {item.title}
-                  </div>
+                  </Link>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     {item.guestName ? `Client: ${item.guestName}` : "—"}
                   </div>
