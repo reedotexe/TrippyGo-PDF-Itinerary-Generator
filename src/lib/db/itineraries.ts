@@ -5,8 +5,8 @@ import { Itinerary } from "../schema/itinerary";
 import { migrateItinerarySchema } from "../schema/migrate";
 import { getPresignedDownloadUrl } from "../storage/s3";
 import { computeSellingPricePaise, formatInr } from "../pricing";
-import { db, itineraries, itineraryVersions } from "@/db";
-import { eq, desc, and, isNull, isNotNull } from "drizzle-orm";
+import { db, itineraries, itineraryVersions, user as userTable } from "@/db";
+import { eq, desc, and, or, isNull, isNotNull } from "drizzle-orm";
 import { recordAuditEvent } from "@/lib/audit/logger";
 import { AuthenticatedUser } from "@/lib/auth/guard";
 
@@ -43,6 +43,10 @@ interface LocalStore {
   >;
   versions: Record<string, Array<VersionSummary>>;
 }
+
+const isUuid = (val?: string | null): boolean =>
+  typeof val === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
 let storeCache: { mtimeMs: number; store: LocalStore } | null = null;
 
@@ -151,26 +155,28 @@ export async function getItinerary(
   }
 
   // 1. Try DB
-  try {
-    const conditions = [eq(itineraries.id, id), isNull(itineraries.deletedAt)];
-    if (user?.role === "salesperson") {
-      conditions.push(eq(itineraries.ownerId, user.id));
+  if (isUuid(id)) {
+    try {
+      const conditions = [eq(itineraries.id, id), isNull(itineraries.deletedAt)];
+      if (user?.role === "salesperson") {
+        conditions.push(eq(itineraries.ownerId, user.id));
+      }
+
+      const rows = await db
+        .select()
+        .from(itineraries)
+        .where(and(...conditions))
+        .limit(1);
+
+      if (rows.length > 0) {
+        return migrateItinerarySchema(rows[0].currentData);
+      }
+
+      // If query returned no rows and we had a valid DB connection, record is either missing or unowned
+      return null;
+    } catch (err) {
+      // DB offline, fallback to local file store
     }
-
-    const rows = await db
-      .select()
-      .from(itineraries)
-      .where(and(...conditions))
-      .limit(1);
-
-    if (rows.length > 0) {
-      return migrateItinerarySchema(rows[0].currentData);
-    }
-
-    // If query returned no rows and we had a valid DB connection, record is either missing or unowned
-    // (Notice: we don't fall back to local store if DB is actively working and returned empty)
-  } catch (err) {
-    // DB offline, fallback to local file store
   }
 
   // 2. Fallback to local store
@@ -203,70 +209,113 @@ export async function saveItineraryData(
   const ownerId = user?.id || data.ownership?.ownerId || null;
 
   // 1. Try DB
-  try {
-    const existing = await db
-      .select()
-      .from(itineraries)
-      .where(eq(itineraries.id, id))
-      .limit(1);
+  if (isUuid(id)) {
+    try {
+      let safeOwnerId = ownerId;
+      let safeActorId = actorId;
 
-    if (existing.length > 0) {
-      const row = existing[0];
-      // Anti-probing: reject update if soft-deleted or unowned by this salesperson
-      if (row.deletedAt) {
-        const error = new Error("Itinerary not found");
-        (error as any).status = 404;
-        throw error;
-      }
-      if (user?.role === "salesperson" && row.ownerId && row.ownerId !== user.id) {
-        const error = new Error("Itinerary not found");
-        (error as any).status = 404;
-        throw error;
+      if (safeOwnerId || safeActorId) {
+        try {
+          if (safeOwnerId) {
+            const ownerExists = await db
+              .select({ id: userTable.id })
+              .from(userTable)
+              .where(eq(userTable.id, safeOwnerId))
+              .limit(1);
+            if (ownerExists.length === 0) {
+              if (user?.email) {
+                const matched = await db
+                  .select({ id: userTable.id })
+                  .from(userTable)
+                  .where(eq(userTable.email, user.email))
+                  .limit(1);
+                safeOwnerId = matched.length > 0 ? matched[0].id : null;
+              } else {
+                safeOwnerId = null;
+              }
+            }
+          }
+          if (safeActorId) {
+            if (safeActorId === ownerId && safeOwnerId) {
+              safeActorId = safeOwnerId;
+            } else {
+              const actorExists = await db
+                .select({ id: userTable.id })
+                .from(userTable)
+                .where(eq(userTable.id, safeActorId))
+                .limit(1);
+              if (actorExists.length === 0) safeActorId = safeOwnerId;
+            }
+          }
+        } catch {
+          // DB lookup failure
+        }
       }
 
-      await db
-        .update(itineraries)
-        .set({
+      const existing = await db
+        .select()
+        .from(itineraries)
+        .where(eq(itineraries.id, id))
+        .limit(1);
+
+      if (existing.length > 0) {
+        const row = existing[0];
+        // Anti-probing: reject update if soft-deleted or unowned by this salesperson
+        if (row.deletedAt) {
+          const error = new Error("Itinerary not found");
+          (error as any).status = 404;
+          throw error;
+        }
+        if (user?.role === "salesperson" && row.ownerId && row.ownerId !== user.id) {
+          const error = new Error("Itinerary not found");
+          (error as any).status = 404;
+          throw error;
+        }
+
+        await db
+          .update(itineraries)
+          .set({
+            title,
+            currentData: data,
+            updatedBy: safeActorId,
+            updatedAt: now,
+          })
+          .where(eq(itineraries.id, id));
+
+        await recordAuditEvent({
+          actorId: safeActorId || undefined,
+          action: "itinerary.update",
+          targetType: "itinerary",
+          targetId: id,
+          metadata: { title },
+        });
+        return;
+      } else {
+        await db.insert(itineraries).values({
+          id,
           title,
+          status: "draft",
           currentData: data,
-          updatedBy: actorId,
+          ownerId: safeOwnerId,
+          createdBy: safeActorId,
+          updatedBy: safeActorId,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(itineraries.id, id));
+        });
 
-      await recordAuditEvent({
-        actorId: actorId || undefined,
-        action: "itinerary.update",
-        targetType: "itinerary",
-        targetId: id,
-        metadata: { title },
-      });
-      return;
-    } else {
-      await db.insert(itineraries).values({
-        id,
-        title,
-        status: "draft",
-        currentData: data,
-        ownerId,
-        createdBy: actorId,
-        updatedBy: actorId,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      await recordAuditEvent({
-        actorId: actorId || undefined,
-        action: "itinerary.create",
-        targetType: "itinerary",
-        targetId: id,
-        metadata: { title, ownerId },
-      });
-      return;
+        await recordAuditEvent({
+          actorId: safeActorId || undefined,
+          action: "itinerary.create",
+          targetType: "itinerary",
+          targetId: id,
+          metadata: { title, ownerId: safeOwnerId },
+        });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.status === 404) throw err;
+      console.warn(`[saveItineraryData] DB save failed, falling back to local store:`, err?.message || err);
     }
-  } catch (err: any) {
-    if (err?.status === 404) throw err;
-    // DB offline, fallback to local store
   }
 
   // 2. Save in local store
@@ -349,31 +398,33 @@ export async function softDeleteItinerary(
   const now = new Date();
 
   // 1. Try DB
-  try {
-    const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
-    if (existing.length > 0) {
-      const row = existing[0];
-      if (row.deletedAt) return false;
-      if (user.role === "salesperson" && row.ownerId && row.ownerId !== user.id) {
-        return false; // Anti-probing: return false (translates to 404)
+  if (isUuid(id)) {
+    try {
+      const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
+      if (existing.length > 0) {
+        const row = existing[0];
+        if (row.deletedAt) return false;
+        if (user.role === "salesperson" && row.ownerId && row.ownerId !== user.id) {
+          return false; // Anti-probing: return false (translates to 404)
+        }
+
+        await db
+          .update(itineraries)
+          .set({ deletedAt: now, deletedBy: user.id })
+          .where(eq(itineraries.id, id));
+
+        await recordAuditEvent({
+          actorId: user.id,
+          action: "itinerary.soft_delete",
+          targetType: "itinerary",
+          targetId: id,
+          metadata: { title: row.title, ownerId: row.ownerId },
+        });
+        return true;
       }
-
-      await db
-        .update(itineraries)
-        .set({ deletedAt: now, deletedBy: user.id })
-        .where(eq(itineraries.id, id));
-
-      await recordAuditEvent({
-        actorId: user.id,
-        action: "itinerary.soft_delete",
-        targetType: "itinerary",
-        targetId: id,
-        metadata: { title: row.title, ownerId: row.ownerId },
-      });
-      return true;
+    } catch (err) {
+      // DB offline, fall through to local store
     }
-  } catch (err) {
-    // DB offline, fall through to local store
   }
 
   // 2. Local store
@@ -413,25 +464,27 @@ export async function restoreItinerary(
   const now = new Date();
 
   // 1. Try DB
-  try {
-    const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
-    if (existing.length > 0) {
-      await db
-        .update(itineraries)
-        .set({ deletedAt: null, deletedBy: null, updatedBy: adminUser.id, updatedAt: now })
-        .where(eq(itineraries.id, id));
+  if (isUuid(id)) {
+    try {
+      const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
+      if (existing.length > 0) {
+        await db
+          .update(itineraries)
+          .set({ deletedAt: null, deletedBy: null, updatedBy: adminUser.id, updatedAt: now })
+          .where(eq(itineraries.id, id));
 
-      await recordAuditEvent({
-        actorId: adminUser.id,
-        action: "itinerary.restore",
-        targetType: "itinerary",
-        targetId: id,
-        metadata: { title: existing[0].title },
-      });
-      return true;
+        await recordAuditEvent({
+          actorId: adminUser.id,
+          action: "itinerary.restore",
+          targetType: "itinerary",
+          targetId: id,
+          metadata: { title: existing[0].title },
+        });
+        return true;
+      }
+    } catch (err) {
+      // DB offline
     }
-  } catch (err) {
-    // DB offline
   }
 
   // 2. Local store
@@ -468,26 +521,28 @@ export async function reassignItinerary(
   const now = new Date();
 
   // 1. Try DB
-  try {
-    const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
-    if (existing.length > 0) {
-      const prevOwner = existing[0].ownerId;
-      await db
-        .update(itineraries)
-        .set({ ownerId: newOwnerId, updatedBy: adminUser.id, updatedAt: now })
-        .where(eq(itineraries.id, id));
+  if (isUuid(id)) {
+    try {
+      const existing = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
+      if (existing.length > 0) {
+        const prevOwner = existing[0].ownerId;
+        await db
+          .update(itineraries)
+          .set({ ownerId: newOwnerId, updatedBy: adminUser.id, updatedAt: now })
+          .where(eq(itineraries.id, id));
 
-      await recordAuditEvent({
-        actorId: adminUser.id,
-        action: "itinerary.reassign",
-        targetType: "itinerary",
-        targetId: id,
-        metadata: { previousOwnerId: prevOwner, newOwnerId },
-      });
-      return true;
+        await recordAuditEvent({
+          actorId: adminUser.id,
+          action: "itinerary.reassign",
+          targetType: "itinerary",
+          targetId: id,
+          metadata: { previousOwnerId: prevOwner, newOwnerId },
+        });
+        return true;
+      }
+    } catch (err) {
+      // DB offline
     }
-  } catch (err) {
-    // DB offline
   }
 
   // 2. Local store
@@ -525,29 +580,31 @@ export async function createItineraryVersion(
   const now = new Date();
 
   // Try DB
-  try {
-    const versions = await db
-      .select({ versionNumber: itineraryVersions.versionNumber })
-      .from(itineraryVersions)
-      .where(eq(itineraryVersions.itineraryId, itineraryId))
-      .orderBy(desc(itineraryVersions.versionNumber))
-      .limit(1);
+  if (isUuid(itineraryId)) {
+    try {
+      const versions = await db
+        .select({ versionNumber: itineraryVersions.versionNumber })
+        .from(itineraryVersions)
+        .where(eq(itineraryVersions.itineraryId, itineraryId))
+        .orderBy(desc(itineraryVersions.versionNumber))
+        .limit(1);
 
-    const nextVersionNumber = (versions[0]?.versionNumber || 0) + 1;
+      const nextVersionNumber = (versions[0]?.versionNumber || 0) + 1;
 
-    await db.insert(itineraryVersions).values({
-      id: versionId,
-      itineraryId,
-      versionNumber: nextVersionNumber,
-      data,
-      pdfS3Key,
-      pdfJsonHash,
-      changedAt: now,
-    });
+      await db.insert(itineraryVersions).values({
+        id: versionId,
+        itineraryId,
+        versionNumber: nextVersionNumber,
+        data,
+        pdfS3Key,
+        pdfJsonHash,
+        changedAt: now,
+      });
 
-    return { versionNumber: nextVersionNumber, versionId };
-  } catch (err) {
-    // Fallback to local store
+      return { versionNumber: nextVersionNumber, versionId };
+    } catch (err) {
+      // Fallback to local store
+    }
   }
 
   const store = getLocalStore();
@@ -574,26 +631,34 @@ export async function createItineraryVersion(
 export async function getItineraryVersions(itineraryId: string): Promise<VersionSummary[]> {
   let list: VersionSummary[] = [];
 
-  try {
-    const rows = await db
-      .select()
-      .from(itineraryVersions)
-      .where(eq(itineraryVersions.itineraryId, itineraryId))
-      .orderBy(desc(itineraryVersions.versionNumber));
+  if (isUuid(itineraryId)) {
+    try {
+      const rows = await db
+        .select()
+        .from(itineraryVersions)
+        .where(eq(itineraryVersions.itineraryId, itineraryId))
+        .orderBy(desc(itineraryVersions.versionNumber));
 
-    if (rows.length > 0) {
-      list = rows.map((r) => ({
-        id: r.id,
-        itineraryId: r.itineraryId,
-        versionNumber: r.versionNumber,
-        data: r.data,
-        changedAt: r.changedAt.toISOString(),
-        pdfS3Key: r.pdfS3Key || undefined,
-        pdfJsonHash: r.pdfJsonHash || undefined,
-      }));
+      if (rows.length > 0) {
+        list = rows.map((r) => ({
+          id: r.id,
+          itineraryId: r.itineraryId,
+          versionNumber: r.versionNumber,
+          data: r.data,
+          changedAt: r.changedAt.toISOString(),
+          pdfS3Key: r.pdfS3Key || undefined,
+          pdfJsonHash: r.pdfJsonHash || undefined,
+        }));
+      } else {
+        const store = getLocalStore();
+        list = store.versions[itineraryId] || [];
+      }
+    } catch (err) {
+      // Fallback to local store
+      const store = getLocalStore();
+      list = store.versions[itineraryId] || [];
     }
-  } catch (err) {
-    // Fallback to local store
+  } else {
     const store = getLocalStore();
     list = store.versions[itineraryId] || [];
   }
@@ -775,7 +840,7 @@ export async function listItineraries(
       .where(whereClause)
       .orderBy(desc(itineraries.updatedAt));
 
-    if (rows && rows.length > 0) {
+    if (rows) {
       for (const row of rows) {
         let versions: VersionSummary[] = [];
         try {

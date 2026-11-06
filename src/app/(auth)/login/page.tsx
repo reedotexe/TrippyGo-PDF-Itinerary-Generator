@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
 import { Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, Loader2, ArrowLeft } from "lucide-react";
@@ -13,6 +13,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("forgot") === "true") {
+        setShowForgot(true);
+      }
+    }
+  }, []);
 
   // Forgot password flow state
   const [showForgot, setShowForgot] = useState(false);

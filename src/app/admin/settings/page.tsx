@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AgencySettings } from "@/lib/config/settings";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Save,
   CheckCircle2,
@@ -196,16 +197,16 @@ export default function AdminSettingsPage() {
                 >
                   Default Markup Value {settings.defaultMarkupType === "percent" ? "(%)" : "(₹)"}
                 </label>
-                <input
+                <NumberInput
                   id="setting-markup-val"
-                  type="number"
                   min={0}
                   step={settings.defaultMarkupType === "percent" ? "0.5" : "500"}
+                  fallbackValue={0}
                   value={settings.defaultMarkupValue}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     setSettings({
                       ...settings,
-                      defaultMarkupValue: parseFloat(e.target.value) || 0,
+                      defaultMarkupValue: val,
                     })
                   }
                   className="w-full px-3 py-2 text-xs sm:text-sm font-bold rounded-lg bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#091c3e] text-slate-900 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#091c3e]/20"
@@ -222,16 +223,17 @@ export default function AdminSettingsPage() {
                 >
                   Minimum Margin Floor (%)
                 </label>
-                <input
+                <NumberInput
                   id="setting-min-margin"
-                  type="number"
                   min={0}
                   max={50}
+                  step="0.5"
+                  fallbackValue={8}
                   value={settings.minMarginPercent}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     setSettings({
                       ...settings,
-                      minMarginPercent: parseFloat(e.target.value) || 8,
+                      minMarginPercent: val,
                     })
                   }
                   className="w-full px-3 py-2 text-xs sm:text-sm font-bold rounded-lg bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#091c3e] text-amber-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#091c3e]/20"
@@ -277,16 +279,16 @@ export default function AdminSettingsPage() {
                 >
                   Quote Validity Duration (Days)
                 </label>
-                <input
+                <NumberInput
                   id="setting-validity-days"
-                  type="number"
                   min={1}
                   max={60}
+                  fallbackValue={7}
                   value={settings.quoteValidityDays}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     setSettings({
                       ...settings,
-                      quoteValidityDays: parseInt(e.target.value, 10) || 7,
+                      quoteValidityDays: val,
                     })
                   }
                   className="w-full px-3 py-2 text-xs sm:text-sm font-bold rounded-lg bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#091c3e] text-slate-900 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#091c3e]/20"

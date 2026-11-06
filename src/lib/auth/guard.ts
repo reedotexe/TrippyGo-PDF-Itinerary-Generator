@@ -60,57 +60,51 @@ export async function requireUser(
     }
   }
 
-  // 2. Query Better Auth session
-  try {
-    const sessionResult = await auth.api.getSession({
-      headers: requestHeaders,
-    });
+  // 2. Immediate check for local dev session token (fast path, zero DB latency/errors)
+  const cookieHeader = requestHeaders.get("cookie") || "";
+  const devTokenMatch =
+    cookieHeader.match(/better-auth\.session_token=(dev_sess_[^;]+)/) ||
+    cookieHeader.match(/trippygo_session=(dev_sess_[^;]+)/);
+  if (devTokenMatch) {
+    const devSess = getDevSession(devTokenMatch[1]);
+    if (devSess) {
+      let resolvedUserId = devSess.userId;
+      let resolvedRole = devSess.role;
 
-    if (sessionResult && sessionResult.user) {
-      const user = sessionResult.user as unknown as AuthenticatedUser;
-      const session = sessionResult.session as unknown as AuthenticatedSession;
-
-      // Real-time ban/deactivation check
-      if (user.banned) {
-        throw new AuthError(
-          403,
-          user.banReason ? `Forbidden: Account suspended (${user.banReason})` : "Forbidden: User account is suspended"
-        );
+      // If database is connected, dynamically link dev session to the real user row in PostgreSQL by email
+      try {
+        const { db, user: userTable } = await import("@/db");
+        const { eq } = await import("drizzle-orm");
+        const dbUsers = await db
+          .select({ id: userTable.id, role: userTable.role })
+          .from(userTable)
+          .where(eq(userTable.email, devSess.email))
+          .limit(1);
+        if (dbUsers.length > 0) {
+          resolvedUserId = dbUsers[0].id;
+          if (dbUsers[0].role) resolvedRole = dbUsers[0].role as any;
+        }
+      } catch {
+        // DB offline, retain in-memory devSess.userId
       }
 
-      return { user, session };
-    }
-  } catch (err: any) {
-    // If it is already an AuthError (like 403 banned), re-throw
-    if (err instanceof AuthError) {
-      throw err;
-    }
-    // Database unreachable in local offline tests: fall through to cookie / header inspect
-  }
-
-  // 3. Fallback to dev cookie in offline environments
-  const cookieHeader = requestHeaders.get("cookie") || "";
-  const match = cookieHeader.match(/better-auth\.session_token=([^;]+)/) || cookieHeader.match(/trippygo_session=([^;]+)/);
-  if (match) {
-    const devSess = getDevSession(match[1]);
-    if (devSess) {
       const user: AuthenticatedUser = {
-        id: devSess.userId,
+        id: resolvedUserId,
         name: devSess.name,
         email: devSess.email,
-        role: devSess.role,
+        role: resolvedRole,
         banned: false,
       };
       const session: AuthenticatedSession = {
         id: devSess.id,
-        userId: devSess.userId,
+        userId: resolvedUserId,
         expiresAt: new Date(devSess.expiresAt),
       };
       return { user, session };
     }
   }
 
-  // 4. Fallback to integration test headers (x-user-id / x-user-role)
+  // 3. Fallback to integration test headers (x-user-id / x-user-role)
   const headerUserId = requestHeaders.get("x-user-id");
   const headerUserRole = requestHeaders.get("x-user-role");
 
@@ -136,7 +130,58 @@ export async function requireUser(
     return { user, session };
   }
 
-  // 5. Reject unauthenticated access
+  // 4. Query Better Auth session (PostgreSQL)
+  try {
+    const sessionResult = await auth.api.getSession({
+      headers: requestHeaders,
+    });
+
+    if (sessionResult && sessionResult.user) {
+      const user = sessionResult.user as unknown as AuthenticatedUser;
+      const session = sessionResult.session as unknown as AuthenticatedSession;
+
+      // Real-time ban/deactivation check
+      if (user.banned) {
+        throw new AuthError(
+          403,
+          user.banReason ? `Forbidden: Account suspended (${user.banReason})` : "Forbidden: User account is suspended"
+        );
+      }
+
+      return { user, session };
+    }
+  } catch (err: any) {
+    // If it is already an AuthError (like 403 banned), re-throw
+    if (err instanceof AuthError) {
+      throw err;
+    }
+    // Database offline or auth query failure: fall through
+  }
+
+  // 5. Fallback to any remaining local dev cookie in offline environments
+  const anyTokenMatch =
+    cookieHeader.match(/better-auth\.session_token=([^;]+)/) ||
+    cookieHeader.match(/trippygo_session=([^;]+)/);
+  if (anyTokenMatch) {
+    const devSess = getDevSession(anyTokenMatch[1]);
+    if (devSess) {
+      const user: AuthenticatedUser = {
+        id: devSess.userId,
+        name: devSess.name,
+        email: devSess.email,
+        role: devSess.role,
+        banned: false,
+      };
+      const session: AuthenticatedSession = {
+        id: devSess.id,
+        userId: devSess.userId,
+        expiresAt: new Date(devSess.expiresAt),
+      };
+      return { user, session };
+    }
+  }
+
+  // 6. Reject unauthenticated access
   throw new AuthError(401, "Unauthorized: Authentication required");
 }
 

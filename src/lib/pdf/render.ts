@@ -1,4 +1,3 @@
-import { chromium } from "playwright";
 import { createHash } from "crypto";
 import { getItinerary, createItineraryVersion } from "@/lib/db/itineraries";
 import { computeClientView } from "@/lib/schema/client-view";
@@ -38,12 +37,16 @@ export async function renderItineraryToPdf(
 
   // 2. Generate signed short-lived render token (valid for 5 minutes)
   const token = signRenderToken(itineraryId, 300);
-  const baseUrl = options.baseUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // 3. Resolve base URL: In containerized environments, the renderer microservice must reach
+  // the web app via its internal Docker network address (e.g. http://web:3000)
+  const internalBaseUrl = process.env.INTERNAL_APP_URL;
+  const baseUrl = internalBaseUrl || options.baseUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const targetUrl = `${baseUrl}/print/${itineraryId}?token=${token}`;
 
   let pdfBuffer: Buffer;
 
-  // 3. Check if dedicated Renderer Microservice is available
+  // 4. Check if dedicated Renderer Microservice is available
   const rendererServiceUrl = process.env.RENDERER_SERVICE_URL;
   if (rendererServiceUrl) {
     try {
@@ -56,18 +59,23 @@ export async function renderItineraryToPdf(
         const arrayBuf = await response.arrayBuffer();
         pdfBuffer = Buffer.from(arrayBuf);
       } else {
-        throw new Error(`Renderer service returned status: ${response.status}`);
+        const errText = await response.text().catch(() => "");
+        throw new Error(`Renderer service returned status: ${response.status} - ${errText}`);
       }
     } catch (svcErr) {
-      console.warn(`[PDF Render] Microservice at ${rendererServiceUrl} failed. Falling back to local Playwright.`, svcErr);
-      pdfBuffer = await renderLocally(targetUrl, itineraryId);
+      console.warn(`[PDF Render] Microservice at ${rendererServiceUrl} failed.`, svcErr);
+      if (process.env.NODE_ENV !== "production") {
+        pdfBuffer = await renderLocally(targetUrl, itineraryId);
+      } else {
+        throw svcErr;
+      }
     }
   } else {
-    // Standard embedded Playwright Chromium execution
+    // Standard embedded Playwright Chromium execution (for local dev & test suites)
     pdfBuffer = await renderLocally(targetUrl, itineraryId);
   }
 
-  // 4. Save Version Row in Database/Store
+  // 5. Save Version Row in Database/Store
   const timestamp = Date.now();
   const tempKey = `itineraries/${itineraryId}/v_${timestamp}.pdf`;
   const { versionNumber } = await createItineraryVersion(
@@ -79,7 +87,7 @@ export async function renderItineraryToPdf(
 
   const pdfS3Key = `itineraries/${itineraryId}/v${versionNumber}_${timestamp}.pdf`;
 
-  // 5. Upload to S3 / Local Disk Fallback
+  // 6. Upload to S3 / Local Disk Fallback
   await uploadToStorage({
     key: pdfS3Key,
     data: pdfBuffer,
@@ -96,9 +104,10 @@ export async function renderItineraryToPdf(
 }
 
 /**
- * In-process headless Chromium rendering helper
+ * In-process headless Chromium rendering helper (lazy loads playwright)
  */
 async function renderLocally(targetUrl: string, itineraryId: string): Promise<Buffer> {
+  const { chromium } = await import("playwright");
   const browser = await chromium.launch({
     headless: true,
     args: [

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Pricing, SupplierBreakup, CustomBreakup } from "@/lib/schema/itinerary";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   computeMarkupPaise,
   computeMarginPercent,
@@ -52,28 +53,66 @@ function IndianCurrencyInput({
   disabled = false,
   "aria-label": ariaLabel,
 }: IndianCurrencyInputProps) {
-  const [displayValue, setDisplayValue] = useState<string>(
+  // When focused: show raw numeric digits so typing, backspacing and selecting feel 100% natural.
+  // When blurred: format with standard Indian currency comma grouping (en-IN).
+  const [localValue, setLocalValue] = useState<string>(() =>
     value ? value.toLocaleString("en-IN") : ""
   );
   const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     if (!isFocused) {
-      setDisplayValue(value ? value.toLocaleString("en-IN") : "");
+      setLocalValue(value ? value.toLocaleString("en-IN") : "");
     }
   }, [value, isFocused]);
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(true);
+    // Unformat to clean digits on focus so user can type and backspace without comma interference
+    setLocalValue(value ? String(value) : "");
+    e.currentTarget.select();
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    const cleanDigits = raw.replace(/[^0-9]/g, "");
+    // Strip everything after decimal point if present, and remove non-digits
+    const beforeDot = raw.includes(".") ? raw.split(".")[0] : raw;
+    const cleanDigits = beforeDot.replace(/[^0-9]/g, "");
+
     if (!cleanDigits) {
-      setDisplayValue("");
+      setLocalValue("");
       onChange(0);
       return;
     }
+
     const num = parseInt(cleanDigits, 10);
-    setDisplayValue(num.toLocaleString("en-IN"));
+    // Keep raw clean digits while typing so cursor never jumps and backspace works naturally
+    setLocalValue(cleanDigits);
     onChange(num);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    // On blur, format cleanly with Indian commas
+    setLocalValue(value ? value.toLocaleString("en-IN") : "");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const step = e.shiftKey ? 10000 : 1000;
+      const nextVal = (value || 0) + step;
+      setLocalValue(String(nextVal));
+      onChange(nextVal);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const step = e.shiftKey ? 10000 : 1000;
+      const nextVal = Math.max(0, (value || 0) - step);
+      setLocalValue(nextVal > 0 ? String(nextVal) : "");
+      onChange(nextVal);
+    }
   };
 
   return (
@@ -85,16 +124,11 @@ function IndianCurrencyInput({
         id={id}
         type="text"
         inputMode="numeric"
-        value={displayValue}
+        value={localValue}
         onChange={handleChange}
-        onFocus={(e) => {
-          setIsFocused(true);
-          e.currentTarget.select();
-        }}
-        onBlur={() => {
-          setIsFocused(false);
-          setDisplayValue(value ? value.toLocaleString("en-IN") : "");
-        }}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
         aria-label={ariaLabel}
@@ -634,14 +668,15 @@ export default function PricingPanel({
                       />
                     ) : (
                       <div className="relative">
-                        <input
+                        <NumberInput
                           id="agency-markup-val"
-                          type="number"
                           min={0}
+                          max={100}
+                          step={0.5}
+                          fallbackValue={0}
                           aria-label="Agency markup percentage"
-                          value={pricing.markup.value || ""}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
+                          value={pricing.markup.value}
+                          onChange={(val) => {
                             onChange({
                               ...pricing,
                               markup: { type: "percent", value: val },
@@ -653,7 +688,7 @@ export default function PricingPanel({
                               : "border-slate-300 text-slate-900"
                           }`}
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none select-none">
                           %
                         </span>
                       </div>
@@ -1090,15 +1125,16 @@ export default function PricingPanel({
             >
               Quote Validity (Days)
             </label>
-            <input
+            <NumberInput
               id="pricing-validity-days"
-              type="number"
               min={1}
+              max={90}
+              fallbackValue={7}
               value={pricing.validityDays}
-              onChange={(e) =>
+              onChange={(val) =>
                 onChange({
                   ...pricing,
-                  validityDays: parseInt(e.target.value, 10) || 7,
+                  validityDays: val,
                 })
               }
               className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-h-[42px]"

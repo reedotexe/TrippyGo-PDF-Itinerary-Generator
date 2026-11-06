@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { db, verification, user, account } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 import { recordAuditEvent } from "@/lib/audit/logger";
 
 const localDataDir = path.join(process.cwd(), ".data");
@@ -89,9 +90,44 @@ export async function createVerificationToken({
 
 /**
  * Retrieve a verification token if valid and not expired.
+ * Checks PostgreSQL first, with fallback to local JSON file store.
  */
-export function getVerificationToken(token: string): VerificationTokenRecord | null {
+export async function getVerificationToken(token: string): Promise<VerificationTokenRecord | null> {
   if (!token) return null;
+
+  // 1. Check PostgreSQL verification table
+  try {
+    const rows = await db
+      .select()
+      .from(verification)
+      .where(eq(verification.identifier, `reset-password:${token}`))
+      .limit(1);
+
+    if (rows.length > 0) {
+      const v = rows[0];
+      if (new Date(v.expiresAt).getTime() >= Date.now()) {
+        let userEmail = v.value;
+        // If v.value doesn't have an '@', it could be a userId
+        if (!userEmail.includes("@")) {
+          const u = await db.select().from(user).where(eq(user.id, v.value)).limit(1);
+          if (u.length > 0 && u[0].email) {
+            userEmail = u[0].email;
+          }
+        }
+        return {
+          token,
+          email: userEmail.toLowerCase().trim(),
+          type: "reset-password",
+          expiresAt: v.expiresAt.toISOString(),
+          createdAt: v.createdAt.toISOString(),
+        };
+      }
+    }
+  } catch {
+    // Database offline, fall through to local store
+  }
+
+  // 2. Check local JSON store (.data/tokens.json)
   const store = getTokenStore();
   const record = store[token];
   if (!record) return null;
@@ -111,21 +147,22 @@ export function getVerificationToken(token: string): VerificationTokenRecord | n
 export async function consumeVerificationToken(token: string): Promise<void> {
   if (!token) return;
 
-  // 1. Remove from local store
-  const store = getTokenStore();
-  delete store[token];
-  saveTokenStore(store);
-
-  // 2. Best-effort remove from PostgreSQL
+  // 1. Remove from PostgreSQL
   try {
     await db.delete(verification).where(eq(verification.identifier, `reset-password:${token}`));
   } catch {
     // Ignore DB offline
   }
+
+  // 2. Remove from local store
+  const store = getTokenStore();
+  delete store[token];
+  saveTokenStore(store);
 }
 
 /**
- * Set a user's password in local store and best-effort update in DB.
+ * Set a user's password in PostgreSQL (Supabase) and local dev store.
+ * Hashes password using Better Auth's official hasher and syncs account table.
  */
 export async function setUserPassword({
   email,
@@ -139,7 +176,76 @@ export async function setUserPassword({
   const normalizedEmail = email.toLowerCase().trim();
   let updated = false;
 
-  // 1. Update in local store
+  // 1. Update in PostgreSQL database (Supabase)
+  try {
+    const dbUsers = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, normalizedEmail))
+      .limit(1);
+
+    if (dbUsers.length > 0) {
+      const targetUser = dbUsers[0];
+
+      // Hash the password using Better Auth's internal password hasher
+      const authCtx = await (auth as any).$context;
+      const hashedPassword = await authCtx.password.hash(newPassword);
+
+      // Check if credential account already exists for this user
+      const existingAccounts = await db
+        .select()
+        .from(account)
+        .where(
+          and(
+            eq(account.userId, targetUser.id),
+            eq(account.providerId, "credential")
+          )
+        )
+        .limit(1);
+
+      if (existingAccounts.length > 0) {
+        await db
+          .update(account)
+          .set({
+            password: hashedPassword,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(account.userId, targetUser.id),
+              eq(account.providerId, "credential")
+            )
+          );
+      } else {
+        await db.insert(account).values({
+          id: randomUUID(),
+          accountId: targetUser.id,
+          providerId: "credential",
+          userId: targetUser.id,
+          password: hashedPassword,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      // Ensure user account is active and marked verified
+      await db
+        .update(user)
+        .set({
+          banned: false,
+          banReason: null,
+          emailVerified: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, targetUser.id));
+
+      updated = true;
+    }
+  } catch (dbErr) {
+    console.error("[setUserPassword] Error updating database password:", dbErr);
+  }
+
+  // 2. Update in local store (.data/users.json) for dev fallback
   if (fs.existsSync(localUsersFile)) {
     try {
       const data = JSON.parse(fs.readFileSync(localUsersFile, "utf8"));
@@ -162,7 +268,7 @@ export async function setUserPassword({
     }
   }
 
-  // 2. Record audit log
+  // 3. Record audit log
   await recordAuditEvent({
     actorId: normalizedEmail,
     action: "user.password_reset",

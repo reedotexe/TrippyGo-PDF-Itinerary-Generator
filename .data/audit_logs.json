@@ -2793,5 +2793,2174 @@
     },
     "ipAddress": null,
     "createdAt": "2026-11-02T09:28:39.801Z"
+  },
+  {
+    "id": "audit-1793687346564-mydib",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793687346463",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T06:29:06.534Z"
+  },
+  {
+    "id": "audit-1793689506100-o9d9r",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-03T07:05:05.962Z"
+  },
+  {
+    "id": "audit-1793689508151-p8zl6",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793689507982",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:08.118Z"
+  },
+  {
+    "id": "audit-1793689508243-mqht2",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793689507982",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:08.204Z"
+  },
+  {
+    "id": "audit-1793689508794-pwi6i",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793689507982",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:08.765Z"
+  },
+  {
+    "id": "audit-1793689509013-8eop8",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793689507982",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:08.870Z"
+  },
+  {
+    "id": "audit-1793689509132-os126",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793689507982",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:09.102Z"
+  },
+  {
+    "id": "audit-1793689510898-qrajy",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_95acfd5e",
+    "metadata": {
+      "name": "Advisor mw0cf86m",
+      "email": "advisor_mw0cf86m@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:10.870Z"
+  },
+  {
+    "id": "audit-1793689510992-njcy7",
+    "actorId": "usr_alice_mw0cf86m",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cf86m",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0cf86m"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:10.961Z"
+  },
+  {
+    "id": "audit-1793689511153-22cz9",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_c38f6c4f",
+    "metadata": {
+      "name": "Bob Agent mw0cf86m",
+      "email": "bob_mw0cf86m@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:11.124Z"
+  },
+  {
+    "id": "audit-1793689511273-81814",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cf86m",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0cf86m",
+      "newOwnerId": "usr_c38f6c4f"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:11.244Z"
+  },
+  {
+    "id": "audit-1793689511418-3kn6t",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cf86m",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_c38f6c4f"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:11.389Z"
+  },
+  {
+    "id": "audit-1793689511571-4wsga",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cf86m",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:11.543Z"
+  },
+  {
+    "id": "audit-1793689526247-wlglf",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793689526148",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:05:26.218Z"
+  },
+  {
+    "id": "audit-1793689720962-sihc8",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-03T07:08:40.931Z"
+  },
+  {
+    "id": "audit-1793689723182-6qef0",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793689723040",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:43.134Z"
+  },
+  {
+    "id": "audit-1793689723274-79wqj",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793689723040",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:43.244Z"
+  },
+  {
+    "id": "audit-1793689723745-qjob3",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793689723040",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:43.712Z"
+  },
+  {
+    "id": "audit-1793689723871-xkl1j",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793689723040",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:43.838Z"
+  },
+  {
+    "id": "audit-1793689723997-3opke",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793689723040",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:43.965Z"
+  },
+  {
+    "id": "audit-1793689725899-zkgdg",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_f76a200a",
+    "metadata": {
+      "name": "Advisor mw0cju5l",
+      "email": "advisor_mw0cju5l@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:45.869Z"
+  },
+  {
+    "id": "audit-1793689726007-3edso",
+    "actorId": "usr_alice_mw0cju5l",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cju5l",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0cju5l"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:45.974Z"
+  },
+  {
+    "id": "audit-1793689726181-f3sec",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_7856b777",
+    "metadata": {
+      "name": "Bob Agent mw0cju5l",
+      "email": "bob_mw0cju5l@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:46.150Z"
+  },
+  {
+    "id": "audit-1793689726309-mp0w1",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cju5l",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0cju5l",
+      "newOwnerId": "usr_7856b777"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:46.278Z"
+  },
+  {
+    "id": "audit-1793689726454-jxmi1",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cju5l",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_7856b777"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:46.424Z"
+  },
+  {
+    "id": "audit-1793689726725-pg53y",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0cju5l",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:46.688Z"
+  },
+  {
+    "id": "audit-1793689730476-gct7p",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793689730297",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T07:08:50.414Z"
+  },
+  {
+    "id": "audit-1793692894221-wwwc9",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-03T08:01:34.184Z"
+  },
+  {
+    "id": "audit-1793692897516-g2bmo",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793692897283",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:37.438Z"
+  },
+  {
+    "id": "audit-1793692897745-co80y",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793692897283",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:37.604Z"
+  },
+  {
+    "id": "audit-1793692898211-w84o6",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793692897283",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:38.172Z"
+  },
+  {
+    "id": "audit-1793692898489-mibsv",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793692897283",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:38.343Z"
+  },
+  {
+    "id": "audit-1793692898793-eicz9",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793692897283",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:38.746Z"
+  },
+  {
+    "id": "audit-1793692900861-vg6rz",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_8b70cd44",
+    "metadata": {
+      "name": "Advisor mw0efvuu",
+      "email": "advisor_mw0efvuu@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:40.809Z"
+  },
+  {
+    "id": "audit-1793692901091-qirkk",
+    "actorId": "usr_alice_mw0efvuu",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0efvuu",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0efvuu"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:41.049Z"
+  },
+  {
+    "id": "audit-1793692901296-kk595",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_57c0e380",
+    "metadata": {
+      "name": "Bob Agent mw0efvuu",
+      "email": "bob_mw0efvuu@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:41.259Z"
+  },
+  {
+    "id": "audit-1793692901478-82mbj",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0efvuu",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0efvuu",
+      "newOwnerId": "usr_57c0e380"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:41.428Z"
+  },
+  {
+    "id": "audit-1793692901669-0q3lt",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0efvuu",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_57c0e380"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:41.629Z"
+  },
+  {
+    "id": "audit-1793692901882-9996u",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0efvuu",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:41.832Z"
+  },
+  {
+    "id": "audit-1793692914024-2wfoo",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793692913877",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:01:53.984Z"
+  },
+  {
+    "id": "audit-1793692963588-eqqnq",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793692963362",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:43.512Z"
+  },
+  {
+    "id": "audit-1793692963759-icy5y",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793692963362",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:43.700Z"
+  },
+  {
+    "id": "audit-1793692964413-okilt",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793692963362",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:44.272Z"
+  },
+  {
+    "id": "audit-1793692964602-5zp5w",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793692963362",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:44.548Z"
+  },
+  {
+    "id": "audit-1793692964807-s8hse",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793692963362",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:44.759Z"
+  },
+  {
+    "id": "audit-1793692967361-2zqqv",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_98947b8b",
+    "metadata": {
+      "name": "Advisor mw0ehb95",
+      "email": "advisor_mw0ehb95@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:47.320Z"
+  },
+  {
+    "id": "audit-1793692967512-vmiaf",
+    "actorId": "usr_alice_mw0ehb95",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0ehb95",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0ehb95"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:47.461Z"
+  },
+  {
+    "id": "audit-1793692967789-71kqb",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_eb1002e2",
+    "metadata": {
+      "name": "Bob Agent mw0ehb95",
+      "email": "bob_mw0ehb95@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:47.742Z"
+  },
+  {
+    "id": "audit-1793692967999-lxyqd",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0ehb95",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0ehb95",
+      "newOwnerId": "usr_eb1002e2"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:47.934Z"
+  },
+  {
+    "id": "audit-1793692968297-vuxay",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0ehb95",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_eb1002e2"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:48.252Z"
+  },
+  {
+    "id": "audit-1793692968547-jy5b3",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0ehb95",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:02:48.500Z"
+  },
+  {
+    "id": "audit-1793694146492-yfm5d",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793694146310",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:22:26.444Z"
+  },
+  {
+    "id": "audit-1793694436085-wqug9",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "d46cb6ab-6973-4085-a662-676077944c78",
+    "metadata": {
+      "title": "Vietnam - 4 Nights Phu Quoc",
+      "ownerId": "usr_admin_1"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:27:15.052Z"
+  },
+  {
+    "id": "audit-1793694494869-5nmbp",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793694494761",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:28:14.835Z"
+  },
+  {
+    "id": "audit-1793694714001-zepm9",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-03T08:31:53.967Z"
+  },
+  {
+    "id": "audit-1793694716299-759wl",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793694716146",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:56.247Z"
+  },
+  {
+    "id": "audit-1793694716494-ynpcd",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793694716146",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:56.458Z"
+  },
+  {
+    "id": "audit-1793694716890-nwq8q",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793694716146",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:56.858Z"
+  },
+  {
+    "id": "audit-1793694717015-th7bk",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793694716146",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:56.983Z"
+  },
+  {
+    "id": "audit-1793694717246-2z0if",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793694716146",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:57.216Z"
+  },
+  {
+    "id": "audit-1793694719073-89tcw",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_484aad62",
+    "metadata": {
+      "name": "Advisor mw0fiutv",
+      "email": "advisor_mw0fiutv@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:59.043Z"
+  },
+  {
+    "id": "audit-1793694719181-12w1i",
+    "actorId": "usr_alice_mw0fiutv",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0fiutv",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0fiutv"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:59.149Z"
+  },
+  {
+    "id": "audit-1793694719356-45c20",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_157409a5",
+    "metadata": {
+      "name": "Bob Agent mw0fiutv",
+      "email": "bob_mw0fiutv@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:59.325Z"
+  },
+  {
+    "id": "audit-1793694719503-3ns31",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0fiutv",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0fiutv",
+      "newOwnerId": "usr_157409a5"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:59.468Z"
+  },
+  {
+    "id": "audit-1793694719664-rm213",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0fiutv",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_157409a5"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:59.631Z"
+  },
+  {
+    "id": "audit-1793694719838-twz6x",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0fiutv",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:31:59.807Z"
+  },
+  {
+    "id": "audit-1793694728399-l7e43",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793694728181",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T08:32:08.252Z"
+  },
+  {
+    "id": "audit-1793696584577-622rt",
+    "actorId": "usr_c4b7ae43",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "1c1091fe-2c6b-494f-946a-df46e7a19d85",
+    "metadata": {
+      "title": "Phu Quoc Island Escape",
+      "ownerId": "usr_c4b7ae43"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:03:03.490Z"
+  },
+  {
+    "id": "audit-1793696616422-mvy5p",
+    "actorId": "usr_c4b7ae43",
+    "action": "itinerary.update",
+    "targetType": "itinerary",
+    "targetId": "1c1091fe-2c6b-494f-946a-df46e7a19d85",
+    "metadata": {
+      "title": "Phu Quoc Island Escape"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:03:35.328Z"
+  },
+  {
+    "id": "audit-1793696640232-yg4pb",
+    "actorId": "admin_dev",
+    "action": "itinerary.update",
+    "targetType": "itinerary",
+    "targetId": "a8c9e6ed-c594-41f5-b3f1-8c0e05e6e4a0",
+    "metadata": {
+      "title": "Phuket, Krabi & Kuala Lumpur Getaway"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:03:58.439Z"
+  },
+  {
+    "id": "audit-1793696641300-i9xod",
+    "actorId": "usr_c4b7ae43",
+    "action": "pdf.generate",
+    "targetType": "itinerary",
+    "targetId": "1c1091fe-2c6b-494f-946a-df46e7a19d85",
+    "metadata": {
+      "versionNumber": 1,
+      "pdfJsonHash": "99ff1553a572bb0423a6e64f520ac9a291e06642e2e23aab10b1c3c2cb76f921"
+    },
+    "ipAddress": "::1",
+    "createdAt": "2026-11-03T09:03:58.200Z"
+  },
+  {
+    "id": "audit-1793696666152-e4vvt",
+    "actorId": "admin_dev",
+    "action": "pdf.generate",
+    "targetType": "itinerary",
+    "targetId": "a8c9e6ed-c594-41f5-b3f1-8c0e05e6e4a0",
+    "metadata": {
+      "versionNumber": 2,
+      "pdfJsonHash": "29781ef97eb61b93d733748033822897b041f6f2697d4cf559063e5c55488ad1"
+    },
+    "ipAddress": "::1",
+    "createdAt": "2026-11-03T09:04:24.603Z"
+  },
+  {
+    "id": "audit-1793697165448-inqvh",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793697165346",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:12:45.417Z"
+  },
+  {
+    "id": "audit-1793697250700-glrf9",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793697250592",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:14:10.663Z"
+  },
+  {
+    "id": "audit-1793697431412-zzd3e",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697431240",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:11.368Z"
+  },
+  {
+    "id": "audit-1793697431535-qfy2p",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793697431240",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:11.500Z"
+  },
+  {
+    "id": "audit-1793697432030-v66gn",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697431240",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:11.998Z"
+  },
+  {
+    "id": "audit-1793697432270-g8obi",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697431240",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:12.126Z"
+  },
+  {
+    "id": "audit-1793697432400-utdbc",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793697431240",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:12.370Z"
+  },
+  {
+    "id": "audit-1793697434330-u0trg",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_daf30704",
+    "metadata": {
+      "name": "Advisor mw0h51xj",
+      "email": "advisor_mw0h51xj@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:14.298Z"
+  },
+  {
+    "id": "audit-1793697434571-yxacy",
+    "actorId": "usr_alice_mw0h51xj",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h51xj",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0h51xj"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:14.534Z"
+  },
+  {
+    "id": "audit-1793697434746-sh3hq",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_1b0710a0",
+    "metadata": {
+      "name": "Bob Agent mw0h51xj",
+      "email": "bob_mw0h51xj@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:14.714Z"
+  },
+  {
+    "id": "audit-1793697434889-8zdxm",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h51xj",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0h51xj",
+      "newOwnerId": "usr_1b0710a0"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:14.853Z"
+  },
+  {
+    "id": "audit-1793697435054-059ss",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h51xj",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_1b0710a0"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:15.020Z"
+  },
+  {
+    "id": "audit-1793697435237-1zzck",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h51xj",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:17:15.196Z"
+  },
+  {
+    "id": "audit-1793697592721-0fh9q",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697592595",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:52.646Z"
+  },
+  {
+    "id": "audit-1793697592786-yp6bg",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793697592595",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:52.753Z"
+  },
+  {
+    "id": "audit-1793697592977-klsts",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697592595",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:52.941Z"
+  },
+  {
+    "id": "audit-1793697593051-kfcw3",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697592595",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:53.010Z"
+  },
+  {
+    "id": "audit-1793697593117-u6f2j",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793697592595",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:53.084Z"
+  },
+  {
+    "id": "audit-1793697594710-me6gp",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_4624a6a7",
+    "metadata": {
+      "name": "Advisor mw0h8hrj",
+      "email": "advisor_mw0h8hrj@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:54.679Z"
+  },
+  {
+    "id": "audit-1793697594787-2kxcx",
+    "actorId": "usr_alice_mw0h8hrj",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h8hrj",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0h8hrj"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:54.754Z"
+  },
+  {
+    "id": "audit-1793697594895-z69k9",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_e5bf28ee",
+    "metadata": {
+      "name": "Bob Agent mw0h8hrj",
+      "email": "bob_mw0h8hrj@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:54.864Z"
+  },
+  {
+    "id": "audit-1793697595004-946tg",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h8hrj",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0h8hrj",
+      "newOwnerId": "usr_e5bf28ee"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:54.971Z"
+  },
+  {
+    "id": "audit-1793697595063-culpo",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h8hrj",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_e5bf28ee"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:55.029Z"
+  },
+  {
+    "id": "audit-1793697595210-2jfa1",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h8hrj",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:19:55.175Z"
+  },
+  {
+    "id": "audit-1793697655647-m1mg0",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-03T09:20:55.515Z"
+  },
+  {
+    "id": "audit-1793697657625-xo96u",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697657508",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:57.559Z"
+  },
+  {
+    "id": "audit-1793697657693-bx1o5",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793697657508",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:57.655Z"
+  },
+  {
+    "id": "audit-1793697657887-8s5ah",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697657508",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:57.858Z"
+  },
+  {
+    "id": "audit-1793697657954-n7elo",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793697657508",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:57.922Z"
+  },
+  {
+    "id": "audit-1793697658019-4d5e9",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793697657508",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:57.987Z"
+  },
+  {
+    "id": "audit-1793697659586-sudbm",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_494dbb44",
+    "metadata": {
+      "name": "Advisor mw0h9vtq",
+      "email": "advisor_mw0h9vtq@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:59.555Z"
+  },
+  {
+    "id": "audit-1793697659667-w1c3z",
+    "actorId": "usr_alice_mw0h9vtq",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h9vtq",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0h9vtq"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:59.626Z"
+  },
+  {
+    "id": "audit-1793697659984-91x90",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_da0ef1bf",
+    "metadata": {
+      "name": "Bob Agent mw0h9vtq",
+      "email": "bob_mw0h9vtq@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:20:59.845Z"
+  },
+  {
+    "id": "audit-1793697660102-ah8c4",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h9vtq",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0h9vtq",
+      "newOwnerId": "usr_da0ef1bf"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:21:00.066Z"
+  },
+  {
+    "id": "audit-1793697660171-hh0ax",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h9vtq",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_da0ef1bf"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:21:00.133Z"
+  },
+  {
+    "id": "audit-1793697660417-coq1k",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0h9vtq",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:21:00.279Z"
+  },
+  {
+    "id": "audit-1793697671729-kukku",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793697671641",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T09:21:11.687Z"
+  },
+  {
+    "id": "audit-1793700234809-ggesl",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793700234720",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:03:54.759Z"
+  },
+  {
+    "id": "audit-1793700647392-xyh5p",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-03T10:10:47.246Z"
+  },
+  {
+    "id": "audit-1793700649680-jnj9v",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793700649563",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:49.607Z"
+  },
+  {
+    "id": "audit-1793700649740-b3y1b",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793700649563",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:49.707Z"
+  },
+  {
+    "id": "audit-1793700649940-6284x",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793700649563",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:49.907Z"
+  },
+  {
+    "id": "audit-1793700650013-ly5bb",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793700649563",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:49.972Z"
+  },
+  {
+    "id": "audit-1793700650081-a034a",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793700649563",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:50.044Z"
+  },
+  {
+    "id": "audit-1793700651836-d45rm",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_b0cb3f4b",
+    "metadata": {
+      "name": "Advisor mw0j20ng",
+      "email": "advisor_mw0j20ng@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:51.802Z"
+  },
+  {
+    "id": "audit-1793700651910-1540v",
+    "actorId": "usr_alice_mw0j20ng",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0j20ng",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw0j20ng"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:51.876Z"
+  },
+  {
+    "id": "audit-1793700652129-w5sbb",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_07bfa7dc",
+    "metadata": {
+      "name": "Bob Agent mw0j20ng",
+      "email": "bob_mw0j20ng@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:52.099Z"
+  },
+  {
+    "id": "audit-1793700652242-bf6j5",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0j20ng",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw0j20ng",
+      "newOwnerId": "usr_07bfa7dc"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:52.209Z"
+  },
+  {
+    "id": "audit-1793700652312-wpr5f",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0j20ng",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_07bfa7dc"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:52.272Z"
+  },
+  {
+    "id": "audit-1793700652460-m5ted",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw0j20ng",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:10:52.420Z"
+  },
+  {
+    "id": "audit-1793700662584-ofty7",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793700662497",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:11:02.539Z"
+  },
+  {
+    "id": "audit-1793701457209-1o2fg",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793701457137",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:24:17.172Z"
+  },
+  {
+    "id": "audit-1793701904605-e2nd2",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793701904523",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T10:31:44.565Z"
+  },
+  {
+    "id": "audit-1793703993809-gx9fz",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793703993705",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T11:06:33.741Z"
+  },
+  {
+    "id": "audit-1793706663841-1vd6u",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793706663715",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-03T11:51:03.772Z"
+  },
+  {
+    "id": "audit-1793768956311-gtoll",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-04T05:09:16.265Z"
+  },
+  {
+    "id": "audit-1793768974365-kpwsr",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793768974200",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:34.279Z"
+  },
+  {
+    "id": "audit-1793768974438-r0xca",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793768974200",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:34.401Z"
+  },
+  {
+    "id": "audit-1793768974667-k1tif",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793768974200",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:34.636Z"
+  },
+  {
+    "id": "audit-1793768974730-6hdpm",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793768974200",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:34.698Z"
+  },
+  {
+    "id": "audit-1793768974794-n2iq7",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793768974200",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:34.761Z"
+  },
+  {
+    "id": "audit-1793768976739-406n6",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_c075cbad",
+    "metadata": {
+      "name": "Advisor mw1nqghk",
+      "email": "advisor_mw1nqghk@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:36.706Z"
+  },
+  {
+    "id": "audit-1793768976809-gktsf",
+    "actorId": "usr_alice_mw1nqghk",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1nqghk",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw1nqghk"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:36.777Z"
+  },
+  {
+    "id": "audit-1793768976920-u1mn5",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_53ef9c9e",
+    "metadata": {
+      "name": "Bob Agent mw1nqghk",
+      "email": "bob_mw1nqghk@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:36.888Z"
+  },
+  {
+    "id": "audit-1793768977022-y3hv6",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1nqghk",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw1nqghk",
+      "newOwnerId": "usr_53ef9c9e"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:36.990Z"
+  },
+  {
+    "id": "audit-1793768977082-2evb6",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1nqghk",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_53ef9c9e"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:37.051Z"
+  },
+  {
+    "id": "audit-1793768977226-4htmq",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1nqghk",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:37.187Z"
+  },
+  {
+    "id": "audit-1793768991172-4lc0a",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793768991090",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T05:09:51.129Z"
+  },
+  {
+    "id": "audit-1793775360591-f98gi",
+    "actorId": "reedham.sh@gmail.com",
+    "action": "user.password_reset",
+    "targetType": "user",
+    "targetId": "reedham.sh@gmail.com",
+    "metadata": {
+      "email": "reedham.sh@gmail.com",
+      "success": true
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:00.378Z"
+  },
+  {
+    "id": "audit-1793775381059-uzknu",
+    "actorId": "usr_test_agent_1",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_phase2_verification",
+    "metadata": {
+      "title": "Kashmir Luxury Tour",
+      "ownerId": "usr_test_agent_1"
+    },
+    "ipAddress": "203.0.113.195",
+    "createdAt": "2026-11-04T06:56:21.023Z"
+  },
+  {
+    "id": "audit-1793775396109-0pmzy",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793775395977",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:36.038Z"
+  },
+  {
+    "id": "audit-1793775396166-bnw40",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793775395977",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:36.135Z"
+  },
+  {
+    "id": "audit-1793775396351-kya6l",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793775395977",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:36.318Z"
+  },
+  {
+    "id": "audit-1793775396408-xrrjl",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793775395977",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:36.377Z"
+  },
+  {
+    "id": "audit-1793775396471-bh6pc",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793775395977",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:36.433Z"
+  },
+  {
+    "id": "audit-1793775398533-hcmhp",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_ef8eb8e9",
+    "metadata": {
+      "name": "Advisor mw1rk3kr",
+      "email": "advisor_mw1rk3kr@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:38.497Z"
+  },
+  {
+    "id": "audit-1793775398607-3iu66",
+    "actorId": "usr_alice_mw1rk3kr",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1rk3kr",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw1rk3kr"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:38.575Z"
+  },
+  {
+    "id": "audit-1793775398726-0lpg9",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_402116eb",
+    "metadata": {
+      "name": "Bob Agent mw1rk3kr",
+      "email": "bob_mw1rk3kr@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:38.692Z"
+  },
+  {
+    "id": "audit-1793775398842-14v1i",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1rk3kr",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw1rk3kr",
+      "newOwnerId": "usr_402116eb"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:38.810Z"
+  },
+  {
+    "id": "audit-1793775398914-a0tgs",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1rk3kr",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_402116eb"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:38.880Z"
+  },
+  {
+    "id": "audit-1793775399077-0g8ow",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1rk3kr",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:39.041Z"
+  },
+  {
+    "id": "audit-1793775413248-r4qsl",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793775413172",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T06:56:53.210Z"
+  },
+  {
+    "id": "audit-1793776007179-6gpu9",
+    "actorId": "reedham.sh@gmail.com",
+    "action": "user.password_reset",
+    "targetType": "user",
+    "targetId": "reedham.sh@gmail.com",
+    "metadata": {
+      "email": "reedham.sh@gmail.com",
+      "success": true
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:06:46.973Z"
+  },
+  {
+    "id": "audit-1793777870088-9cdkl",
+    "actorId": "agent_alice",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793777869917",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:49.979Z"
+  },
+  {
+    "id": "audit-1793777870165-j1wuv",
+    "actorId": "agent_bob",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793777869917",
+    "metadata": {
+      "title": "Bob Ladakh Adventure",
+      "ownerId": "agent_bob"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:50.120Z"
+  },
+  {
+    "id": "audit-1793777870417-mhih7",
+    "actorId": "agent_alice",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793777869917",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon",
+      "ownerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:50.372Z"
+  },
+  {
+    "id": "audit-1793777870495-zk5fs",
+    "actorId": "admin_super",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itn_alice_1793777869917",
+    "metadata": {
+      "title": "Alice Kashmir Honeymoon"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:50.451Z"
+  },
+  {
+    "id": "audit-1793777870569-y5nha",
+    "actorId": "admin_super",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itn_bob_1793777869917",
+    "metadata": {
+      "previousOwnerId": "agent_bob",
+      "newOwnerId": "agent_alice"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:50.529Z"
+  },
+  {
+    "id": "audit-1793777872644-ghz3s",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_5f97f42a",
+    "metadata": {
+      "name": "Advisor mw1t14lf",
+      "email": "advisor_mw1t14lf@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:52.599Z"
+  },
+  {
+    "id": "audit-1793777872724-cdpo5",
+    "actorId": "usr_alice_mw1t14lf",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1t14lf",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_alice_mw1t14lf"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:52.689Z"
+  },
+  {
+    "id": "audit-1793777872847-oftwb",
+    "actorId": "usr_admin_1",
+    "action": "user.invite",
+    "targetType": "user",
+    "targetId": "usr_70e876e6",
+    "metadata": {
+      "name": "Bob Agent mw1t14lf",
+      "email": "bob_mw1t14lf@trippygo.com",
+      "role": "salesperson"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:52.807Z"
+  },
+  {
+    "id": "audit-1793777872963-51bgz",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.reassign",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1t14lf",
+    "metadata": {
+      "previousOwnerId": "usr_alice_mw1t14lf",
+      "newOwnerId": "usr_70e876e6"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:52.928Z"
+  },
+  {
+    "id": "audit-1793777873029-et3qm",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.soft_delete",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1t14lf",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)",
+      "ownerId": "usr_70e876e6"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:52.996Z"
+  },
+  {
+    "id": "audit-1793777873274-m45wp",
+    "actorId": "usr_admin_1",
+    "action": "itinerary.restore",
+    "targetType": "itinerary",
+    "targetId": "itin_prop_mw1t14lf",
+    "metadata": {
+      "title": "New Itinerary (Manual Review)"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:37:53.137Z"
+  },
+  {
+    "id": "audit-1793778380195-4om3s",
+    "actorId": "usr_e2e_advisor",
+    "action": "itinerary.create",
+    "targetType": "itinerary",
+    "targetId": "e2e_kashmir_1793778380117",
+    "metadata": {
+      "title": "Srinagar - Gulmarg - Pahalgam - Sonamarg",
+      "ownerId": "usr_e2e_advisor"
+    },
+    "ipAddress": null,
+    "createdAt": "2026-11-04T07:46:20.155Z"
   }
 ]

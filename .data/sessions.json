@@ -70,5 +70,41 @@
     "name": "Reedham 2",
     "createdAt": "2026-11-02T10:23:04.627Z",
     "expiresAt": "2026-12-02T10:23:04.627Z"
+  },
+  "dev_sess_e4cb121a-b211-4bc1-8500-ec730ede0d83": {
+    "id": "dev_sess_e4cb121a-b211-4bc1-8500-ec730ede0d83",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-03T06:46:36.817Z",
+    "expiresAt": "2026-12-03T06:46:36.817Z"
+  },
+  "dev_sess_845ffb40-09b1-4878-9579-e1e2218a3d11": {
+    "id": "dev_sess_845ffb40-09b1-4878-9579-e1e2218a3d11",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-03T07:08:00.117Z",
+    "expiresAt": "2026-12-03T07:08:00.117Z"
+  },
+  "dev_sess_51829c6e-2466-4a19-8fe1-3bbdbd5f74ec": {
+    "id": "dev_sess_51829c6e-2466-4a19-8fe1-3bbdbd5f74ec",
+    "userId": "usr_admin_1",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-03T07:10:30.749Z",
+    "expiresAt": "2026-12-03T07:10:30.749Z"
+  },
+  "dev_sess_020e3bbe-e94f-448f-976e-8924b31937c6": {
+    "id": "dev_sess_020e3bbe-e94f-448f-976e-8924b31937c6",
+    "userId": "admin_dev",
+    "role": "admin",
+    "email": "admin@trippygo.com",
+    "name": "Agency Administrator",
+    "createdAt": "2026-11-03T09:00:23.307Z",
+    "expiresAt": "2026-12-03T09:00:23.307Z"
   }
 }

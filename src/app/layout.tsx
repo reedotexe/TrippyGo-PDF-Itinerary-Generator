@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "Convert supplier quotes into branded, client-ready luxury travel itineraries with zero supplier leaks.",
 };
 
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 export default function RootLayout({
   children,
 }: {
@@ -22,7 +24,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={cn(inter.variable)}>
-      <body>{children}</body>
+      <body>
+        <TooltipProvider>{children}</TooltipProvider>
+      </body>
     </html>
   );
 }

@@ -24,6 +24,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { KASHMIR_SAMPLE_TOUR } from "@/lib/constants/sample-tour";
 
 interface NewItineraryModalProps {
@@ -49,6 +50,13 @@ export function NewItineraryModal({
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) {
+      return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -154,10 +162,10 @@ export function NewItineraryModal({
 
         {/* Global Error Banner */}
         {(errorMsg || fileError) && (
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive flex items-start gap-2">
-            <AlertCircle className="size-4 shrink-0 mt-0.5" />
-            <div>{errorMsg || fileError}</div>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{errorMsg || fileError}</AlertDescription>
+          </Alert>
         )}
 
         {/* Mode Tabs */}
@@ -212,7 +220,7 @@ export function NewItineraryModal({
                     {selectedFile.name}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB · Ready to draft
+                    {formatFileSize(selectedFile.size)} · Ready to draft
                   </div>
                   <Button
                     type="button"
@@ -299,7 +307,7 @@ export function NewItineraryModal({
         </Tabs>
 
         {/* Confidentiality Reassurance Line (Mandatory per Section 10) */}
-        <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted/40 border border-border/60 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted/40 border border-border text-xs text-muted-foreground">
           <ShieldCheck className="size-4 shrink-0 text-muted-foreground" />
           <span>Supplier net rates are never shown to clients.</span>
         </div>

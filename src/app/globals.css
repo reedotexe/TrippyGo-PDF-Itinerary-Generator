@@ -179,6 +179,13 @@ iframe ::selection {
   --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.553 0.013 58.071);
+
+  /* Status additions per DESIGN.md */
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: oklch(0.985 0 0);
+  --success: oklch(0.627 0.194 149.214);
+  --success-foreground: oklch(0.147 0.004 49.25);
+  --success-text: oklch(0.75 0.16 149.214);
 }
 
 @layer base {

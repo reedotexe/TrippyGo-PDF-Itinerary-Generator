@@ -1,0 +1,61 @@
+services:
+  # 1. Next.js Standalone Web Application & API
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - INTERNAL_APP_URL=http://web:3000
+      - RENDERER_SERVICE_URL=http://renderer:3001
+    env_file:
+      - path: .env
+        required: false
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      renderer:
+        condition: service_healthy
+    networks:
+      - dokploy-network
+      - internal-tier
+    restart: unless-stopped
+
+  # 2. Playwright PDF Renderer Microservice (Isolated Headless Chromium)
+  renderer:
+    build:
+      context: ./services/renderer
+      dockerfile: Dockerfile
+    shm_size: "2gb" # Crucial to prevent Chromium shared memory crashes on multi-page PDF rendering
+    mem_limit: 4g
+    cpus: "2"
+    expose:
+      - "3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - internal-tier
+    restart: unless-stopped
+
+networks:
+  # Dokploy's Traefik reverse proxy network (created automatically by Dokploy installation)
+  dokploy-network:
+    external: true
+  # Private internal network for secure web <-> renderer communication
+  internal-tier:
+    driver: bridge

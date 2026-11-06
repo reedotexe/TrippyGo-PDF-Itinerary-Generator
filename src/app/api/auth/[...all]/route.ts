@@ -49,7 +49,7 @@ function getLocalUsersList(): Array<{
 export async function POST(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  // 0. Intercept reset-password if token exists in local token store
+  // 0. Intercept reset-password if token exists in token store (PostgreSQL or local fallback)
   if (pathname.endsWith("/reset-password")) {
     try {
       const clonedReq = req.clone();
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       const token = body.token || "";
       const newPassword = body.newPassword || body.password || "";
 
-      const tokenRecord = getVerificationToken(token);
+      const tokenRecord = await getVerificationToken(token);
       if (tokenRecord) {
         if (!newPassword || newPassword.length < 12) {
           return NextResponse.json(
@@ -66,17 +66,24 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        await setUserPassword({
+        const success = await setUserPassword({
           email: tokenRecord.email,
           newPassword,
           req,
         });
 
+        if (!success) {
+          return NextResponse.json(
+            { message: "Failed to update password. User account not found.", code: "USER_NOT_FOUND" },
+            { status: 400 }
+          );
+        }
+
         await consumeVerificationToken(token);
 
         return NextResponse.json({ status: true });
       } else {
-        // Token not found in local store; try Better Auth, with graceful fallback to invalid token error
+        // Token not found in token store; try Better Auth, with graceful fallback to invalid token error
         try {
           const res = await betterAuthHandlers.POST(req);
           if (res.status >= 200 && res.status < 300) {
@@ -221,12 +228,24 @@ export async function GET(req: NextRequest) {
   // 1. Attempt standard Better Auth handler
   try {
     const res = await betterAuthHandlers.GET(req);
-    if (res.status !== 500) {
+    // Return any successful response OR 3xx redirects (e.g. password reset link callback, oauth redirects)
+    if (res.status >= 200 && res.status < 400) {
       return res;
     }
   } catch {
-    // Database offline
+    // Database offline or auth query failure
   }
 
-  return NextResponse.json(null);
+  // 2. If session cannot be resolved on /get-session, return null and clear any stale zombie cookie
+  // so the client stops repeatedly sending an invalid/broken session token.
+  if (pathname.endsWith("/get-session")) {
+    const res = NextResponse.json(null);
+    if (cookieToken) {
+      res.cookies.delete("better-auth.session_token");
+      res.cookies.delete("trippygo_session");
+    }
+    return res;
+  }
+
+  return NextResponse.json({ error: "Auth operation unavailable" }, { status: 400 });
 }

@@ -20,6 +20,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { InviteUserModal } from "@/components/admin/InviteUserModal";
 import { StaffUserSummary } from "@/lib/db/admin";
 import {
@@ -34,6 +43,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileText,
+  Copy,
+  Check,
 } from "lucide-react";
 
 export default function AdminUsersPage() {
@@ -43,6 +54,12 @@ export default function AdminUsersPage() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [resetModalInfo, setResetModalInfo] = useState<{
+    name: string;
+    email: string;
+    resetUrl: string;
+  } | null>(null);
+  const [copiedResetLink, setCopiedResetLink] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -116,8 +133,27 @@ export default function AdminUsersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send reset email");
       setActionSuccess(`Password reset email dispatched to ${user.email}`);
+      if (data.resetUrl) {
+        setResetModalInfo({
+          name: user.name,
+          email: user.email,
+          resetUrl: data.resetUrl,
+        });
+        setCopiedResetLink(false);
+      }
     } catch (err: any) {
       setActionError(err?.message || "Failed to trigger reset email");
+    }
+  };
+
+  const handleCopyResetLink = async () => {
+    if (!resetModalInfo?.resetUrl) return;
+    try {
+      await navigator.clipboard.writeText(resetModalInfo.resetUrl);
+      setCopiedResetLink(true);
+      setTimeout(() => setCopiedResetLink(false), 2500);
+    } catch {
+      // ignore
     }
   };
 
@@ -359,6 +395,69 @@ export default function AdminUsersPage() {
         onClose={() => setIsInviteOpen(false)}
         onSuccess={fetchUsers}
       />
+
+      {/* Direct Password Reset Link Modal */}
+      <Dialog open={!!resetModalInfo} onOpenChange={(open) => !open && setResetModalInfo(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <DialogTitle className="text-lg font-bold text-slate-900">Password Reset Link</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              A single-use password reset link for <span className="font-semibold text-slate-800">{resetModalInfo?.name}</span> ({resetModalInfo?.email}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
+                Direct Reset URL (Expires in 1 Hour)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={resetModalInfo?.resetUrl || ""}
+                  className="bg-white text-xs font-mono select-all h-9"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-3 shrink-0 gap-1.5"
+                  onClick={handleCopyResetLink}
+                >
+                  {copiedResetLink ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-xs text-emerald-600 font-medium">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span className="text-xs">Copy</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-[12px] text-slate-500 leading-relaxed">
+              If transactional email delivery is delayed, you can copy and share this link directly with the staff member.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              className="w-full bg-[#091c3e] hover:bg-[#1556a6] text-white"
+              onClick={() => setResetModalInfo(null)}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

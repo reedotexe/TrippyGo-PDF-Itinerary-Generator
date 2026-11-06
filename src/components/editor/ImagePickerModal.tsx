@@ -1,28 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { NormalizedImage, buildEditorialCoverQuery, ImageOrientation } from "@/lib/images/client";
+import React, { useState, useEffect, useRef } from "react";
+import { NormalizedImage, buildEditorialCoverQuery } from "@/lib/images/client";
 import {
   COVER_PRESETS,
-  CoverPreset,
   findPresetsForDestinations,
-  presetToItineraryImage,
 } from "@/lib/images/cover-presets";
 import { ItineraryImage } from "@/lib/schema/itinerary";
+import { Search, Loader2, Upload, X, ImageIcon } from "lucide-react";
 import {
-  Search,
-  X,
-  Loader2,
-  Image as ImageIcon,
-  ExternalLink,
-  Sparkles,
-  Upload,
-  Eye,
-  Check,
-  Compass,
-  Layers,
-  Crop,
-} from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import CoverImageCropper from "./CoverImageCropper";
 
 interface ImagePickerModalProps {
@@ -33,6 +34,8 @@ interface ImagePickerModalProps {
   initialQuery: string;
   destinationFallback?: string;
   currentImage?: ItineraryImage | null;
+  packageTitle?: string;
+  guestName?: string;
   onSelectImage: (image: ItineraryImage | null) => void;
 }
 
@@ -44,13 +47,15 @@ export default function ImagePickerModal({
   initialQuery,
   destinationFallback,
   currentImage,
+  packageTitle,
+  guestName,
   onSelectImage,
 }: ImagePickerModalProps) {
   const isCoverMode = mode === "cover";
 
-  // Tabs: 'presets' | 'search' | 'upload'
-  const [activeTab, setActiveTab] = useState<"presets" | "search" | "upload">(
-    isCoverMode ? "presets" : "search"
+  // Tabs: 'suggested' | 'search' | 'upload'
+  const [activeTab, setActiveTab] = useState<"suggested" | "search" | "upload">(
+    isCoverMode ? "suggested" : "search"
   );
 
   // Search & Filter State
@@ -59,25 +64,37 @@ export default function ImagePickerModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>("All");
-  const [showSafeZone, setShowSafeZone] = useState<boolean>(true);
-  const [orientation, setOrientation] = useState<ImageOrientation>(
-    isCoverMode ? "portrait" : "all"
-  );
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
-  // Upload Tab Preview
-  const [uploadedDataUrl, setUploadedDataUrl] = useState<string | null>(null);
-  const [uploadedFileName, setUploadedFileName] = useState<string>("");
+  // Immediate Candidate for Cropper Transition
+  const [candidateForCrop, setCandidateForCrop] = useState<{
+    imageUrl: string;
+    metadata?: Partial<ItineraryImage>;
+  } | null>(null);
 
-  const fetchImages = async (searchQuery: string, orientOverride?: ImageOrientation) => {
+  // Upload State
+  const [dragOver, setDragOver] = useState(false);
+
+  // Abort controller ref for search requests
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const fetchImages = async (searchQuery: string) => {
     if (!searchQuery.trim()) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
     setError(null);
     try {
-      const activeOrient = orientOverride || orientation;
-      const orientationParam = `&orientation=${activeOrient}`;
+      const orientationParam = isCoverMode ? "&orientation=portrait" : "&orientation=all";
       const finalQuery = isCoverMode ? buildEditorialCoverQuery(searchQuery) : searchQuery;
       const res = await fetch(
-        `/api/images/search?query=${encodeURIComponent(finalQuery)}${orientationParam}`
+        `/api/images/search?query=${encodeURIComponent(finalQuery)}${orientationParam}`,
+        { signal: controller.signal }
       );
       const data = await res.json();
       if (res.ok && data.images) {
@@ -85,69 +102,86 @@ export default function ImagePickerModal({
       } else {
         setError(data.error || "Failed to load photos");
       }
-    } catch (err) {
-      setError("Network error while searching images");
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        setError("Network error while searching images");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onCloseRef = React.useRef(onClose);
-  onCloseRef.current = onClose;
-
   useEffect(() => {
     if (isOpen) {
       const initialTerm = initialQuery || destinationFallback || "Dubai travel scenic";
       setQuery(initialTerm);
-      const initialOrient: ImageOrientation = isCoverMode ? "portrait" : "all";
-      setOrientation(initialOrient);
-      setActiveTab(isCoverMode ? "presets" : "search");
-      setUploadedDataUrl(null);
-      setUploadedFileName("");
-      fetchImages(initialTerm, initialOrient);
+      setActiveTab(isCoverMode ? "suggested" : "search");
+      setCandidateForCrop(null);
+      setBrokenImages({});
 
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") onCloseRef.current();
-      };
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
+      // Default suggested region to "Matching" if matching destination presets exist (DESIGN.md 7.12)
+      const matching = findPresetsForDestinations(
+        destinationFallback ? [destinationFallback] : []
+      );
+      setSelectedRegion(matching.length > 0 ? "Matching" : "All");
+
+      // Defer external API search in cover mode until user opens search tab (fixes P1 eager fetch)
+      if (!isCoverMode) {
+        fetchImages(initialTerm);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
 
-  if (!isOpen) return null;
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [isOpen, initialQuery, destinationFallback, isCoverMode]);
 
-  const handleSelectNormalized = async (img: NormalizedImage) => {
-    // 1. If Unsplash, fire download tracking API
-    if (img.provider === "unsplash" && img.downloadLocation) {
+  // Handle Tab Change: trigger search on first switch to search tab if images empty
+  const handleTabChange = (val: string) => {
+    const nextTab = val as "suggested" | "search" | "upload";
+    setActiveTab(nextTab);
+    if (nextTab === "search" && images.length === 0 && !isLoading) {
+      fetchImages(query || initialQuery || destinationFallback || "travel scenic");
+    }
+  };
+
+  // Handle Candidate Selection -> goes straight to Cropper
+  const handleSelectCandidate = (
+    imageUrl: string,
+    metadata?: Partial<ItineraryImage>
+  ) => {
+    setCandidateForCrop({ imageUrl, metadata });
+  };
+
+  // Handle Cropper Apply -> saves cropped image to parent and closes
+  const handleApplyCropped = (croppedDataUrl: string) => {
+    const meta = candidateForCrop?.metadata || {};
+
+    // Track download for Unsplash if applicable
+    if (meta.provider === "unsplash" && meta.downloadLocation) {
       fetch("/api/images/download", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          provider: img.provider,
-          photoId: img.photoId,
-          downloadLocation: img.downloadLocation,
+          provider: meta.provider,
+          photoId: meta.photoId,
+          downloadLocation: meta.downloadLocation,
         }),
       }).catch((e) => console.warn("Failed tracking download:", e));
     }
 
-    // 2. Format to ItineraryImage schema
     const formatted: ItineraryImage = {
-      provider: img.provider,
-      photoId: img.photoId,
-      imageUrl: img.fullUrl,
-      thumbnailUrl: img.thumbUrl,
-      photographerName: img.photographerName,
-      photographerUrl: img.photographerUrl,
-      downloadLocation: img.downloadLocation,
+      provider: meta.provider || "upload",
+      photoId: meta.photoId || (isCoverMode ? `cover-${Date.now()}` : `day-${dayNumber}-${Date.now()}`),
+      imageUrl: croppedDataUrl,
+      thumbnailUrl: croppedDataUrl,
+      photographerName: meta.photographerName || "Custom Selection",
+      photographerUrl: meta.photographerUrl || "",
+      downloadLocation: meta.downloadLocation || null,
     };
 
-    onSelectImage(formatted);
-    onClose();
-  };
-
-  const handleSelectPreset = (preset: CoverPreset) => {
-    const formatted = presetToItineraryImage(preset);
     onSelectImage(formatted);
     onClose();
   };
@@ -161,50 +195,37 @@ export default function ImagePickerModal({
       return;
     }
 
-    setUploadedFileName(file.name);
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
-      setUploadedDataUrl(dataUrl);
+      handleSelectCandidate(dataUrl, {
+        provider: "upload",
+        photographerName: file.name,
+      });
     };
     reader.readAsDataURL(file);
   };
 
-  const handleApplyCropped = (croppedDataUrl: string) => {
-    const formatted: ItineraryImage = {
-      provider: "upload",
-      photoId: isCoverMode ? `upload-cover-${Date.now()}` : `upload-day-${dayNumber}-${Date.now()}`,
-      imageUrl: croppedDataUrl,
-      thumbnailUrl: croppedDataUrl,
-      photographerName: "Custom Direct Upload",
-      photographerUrl: "",
-      downloadLocation: null,
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please drop a valid image file (JPEG, PNG, WebP)");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      handleSelectCandidate(dataUrl, {
+        provider: "upload",
+        photographerName: file.name,
+      });
     };
-
-    onSelectImage(formatted);
-    onClose();
-  };
-
-  const handleApplyUpload = () => {
-    if (!uploadedDataUrl) return;
-
-    const formatted: ItineraryImage = {
-      provider: "upload",
-      photoId: isCoverMode ? `upload-cover-${Date.now()}` : `upload-day-${dayNumber}-${Date.now()}`,
-      imageUrl: uploadedDataUrl,
-      thumbnailUrl: uploadedDataUrl,
-      photographerName: "Custom Direct Upload",
-      photographerUrl: "",
-      downloadLocation: null,
-    };
-
-    onSelectImage(formatted);
-    onClose();
-  };
-
-  const handleClear = () => {
-    onSelectImage(null);
-    onClose();
+    reader.readAsDataURL(file);
   };
 
   // Filter Presets by Region or Destination
@@ -230,696 +251,302 @@ export default function ImagePickerModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-in fade-in">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="image-picker-modal-title"
-        className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden"
-      >
-        {/* 1. MODAL HEADER */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-xs font-bold ${
-                  isCoverMode ? "bg-[#091c3e]" : "bg-blue-600"
-                }`}
-              >
-                {isCoverMode ? <Compass className="w-3.5 h-3.5" /> : dayNumber}
-              </span>
-              <h2 id="image-picker-modal-title" className="text-base font-bold text-slate-800">
-                {isCoverMode ? "Select A4 Portrait Cover Hero Photo" : `Select Photo for Day ${dayNumber}`}
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {isCoverMode
-                ? "Sourced in high-resolution A4 portrait ratio (1:1.414). Keep subject centered in the 45% safe zone."
-                : "Photos are cropped to square (1:1) on the right side of the day block in the final PDF proposal."}
-            </p>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-4xl max-h-[85vh] w-[92vw] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-border bg-card shadow-2xl">
+        {candidateForCrop ? (
+          /* STEP 2: CROPPING AND FRAMING VIEW */
+          <div className="flex-1 flex flex-col min-h-0 h-[75vh]">
+            <CoverImageCropper
+              imageSrc={candidateForCrop.imageUrl}
+              mode={isCoverMode ? "cover" : "day"}
+              dayNumber={dayNumber}
+              packageTitle={packageTitle}
+              guestName={guestName}
+              onApplyCrop={handleApplyCropped}
+              onCancel={() => setCandidateForCrop(null)}
+            />
           </div>
-
-          <div className="flex items-center gap-2">
-            {isCoverMode && (
-              <button
-                type="button"
-                onClick={() => setShowSafeZone(!showSafeZone)}
-                title="Toggle Safe-Zone composition guides"
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition flex items-center gap-1.5 ${
-                  showSafeZone
-                    ? "bg-amber-50 text-amber-800 border-amber-300 shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>Safe Zone {showSafeZone ? "ON" : "OFF"}</span>
-              </button>
-            )}
-
-            {currentImage && (
-              <button
-                type="button"
-                onClick={handleClear}
-                aria-label="Clear selected photo"
-                className="px-3.5 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-medium border border-red-200 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-              >
-                Reset to Auto
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close photo picker modal"
-              className="w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* 2. MODE TABS (Available in both Cover and Day modes) */}
-        <div className="px-6 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex gap-2 py-2 overflow-x-auto">
-            {isCoverMode ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("presets")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 shrink-0 ${
-                    activeTab === "presets"
-                      ? "bg-white text-[#091c3e] shadow-sm border border-slate-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Curated Luxury Presets</span>
-                  <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[10px] rounded-full font-black">
-                    {COVER_PRESETS.length}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("search")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 shrink-0 ${
-                    activeTab === "search"
-                      ? "bg-white text-[#091c3e] shadow-sm border border-slate-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                  }`}
-                >
-                  <Search className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Multi-Stock Portrait Search</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("upload")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 shrink-0 ${
-                    activeTab === "upload"
-                      ? "bg-white text-[#091c3e] shadow-sm border border-slate-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Custom Upload & Crop</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("search")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 shrink-0 ${
-                    activeTab === "search"
-                      ? "bg-white text-[#091c3e] shadow-sm border border-slate-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                  }`}
-                >
-                  <Search className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Stock Search</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("upload")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 shrink-0 ${
-                    activeTab === "upload"
-                      ? "bg-white text-[#091c3e] shadow-sm border border-slate-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Custom Upload (Square)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("presets")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 shrink-0 ${
-                    activeTab === "presets"
-                      ? "bg-white text-[#091c3e] shadow-sm border border-slate-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Destination Presets</span>
-                </button>
-              </>
-            )}
-          </div>
-
-          <div className="hidden md:flex items-center text-[11px] text-slate-500 gap-1.5 shrink-0">
-            <Layers className="w-3.5 h-3.5 text-slate-400" />
-            <span>
-              {isCoverMode
-                ? "A4 Editorial Luxury Spec (1:1.414)"
-                : "Day Editorial Spec (1:1 Square on Right Side)"}
-            </span>
-          </div>
-        </div>
-
-        {/* 3. TAB: CURATED PRESETS */}
-        {activeTab === "presets" && (
-          <div className="flex flex-col flex-1 overflow-hidden">
-            {/* Region Filter Chips */}
-            <div className="px-6 py-3 border-b border-slate-200 bg-white flex items-center gap-2 overflow-x-auto shrink-0">
-              <span className="text-xs font-semibold text-slate-500 shrink-0">Region:</span>
-              {regions.map((region) => (
-                <button
-                  key={region}
-                  type="button"
-                  onClick={() => setSelectedRegion(region)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition shrink-0 ${
-                    selectedRegion === region
-                      ? "bg-[#091c3e] text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {region === "Matching" && destinationFallback
-                    ? `★ Matching (${destinationFallback})`
-                    : region}
-                </button>
-              ))}
-            </div>
-
-            {/* Presets Grid */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {filteredPresets.map((preset) => (
-                  <div
-                    key={preset.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleSelectPreset(preset)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleSelectPreset(preset);
-                      }
-                    }}
-                    className="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-[#091c3e] hover:shadow-xl transition-all cursor-pointer flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                  >
-                    {/* Preset Thumbnail */}
-                    <div
-                      className={`relative overflow-hidden bg-slate-900 ${
-                        isCoverMode ? "aspect-[1/1.414]" : "aspect-square"
-                      }`}
-                    >
-                      <img
-                        src={preset.thumbnailUrl}
-                        alt={preset.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      />
-
-                      {/* Safe Zone Guide (when enabled in cover mode) */}
-                      {isCoverMode && showSafeZone && (
-                        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <div className="h-[20%] bg-blue-900/30 border-b border-blue-400/50 flex items-center justify-center p-1">
-                            <span className="text-[9px] font-black uppercase text-white/90 drop-shadow">
-                              Logo Bar
-                            </span>
-                          </div>
-                          <div className="flex-1 border-2 border-emerald-400/60 m-1 rounded flex items-center justify-center bg-emerald-500/10">
-                            <span className="text-[9px] font-black uppercase text-emerald-200 drop-shadow">
-                              Safe Zone
-                            </span>
-                          </div>
-                          <div className="h-[35%] bg-slate-950/60 border-t border-slate-400/40 flex items-center justify-center p-1">
-                            <span className="text-[9px] font-black uppercase text-white/90 drop-shadow">
-                              Title Vignette
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Square Crop Indicator in Day Mode */}
-                      {!isCoverMode && (
-                        <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8.5px] font-semibold backdrop-blur-xs flex items-center gap-1">
-                          <Crop className="w-2.5 h-2.5" />
-                          <span>Square Crop</span>
-                        </span>
-                      )}
-
-                      {/* Region Badge */}
-                      <span className="absolute top-2 right-2 text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-900/80 text-white backdrop-blur-xs">
-                        {preset.region}
-                      </span>
-                    </div>
-
-                    {/* Metadata Footer */}
-                    <div className="p-2.5 flex flex-col justify-between flex-1 bg-white">
-                      <div>
-                        <div className="font-bold text-xs text-slate-800 line-clamp-1 group-hover:text-blue-600 transition">
-                          {preset.title}
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          Photo: {preset.photographerName}
-                        </div>
-                      </div>
-
-                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                        <span className="text-slate-400 uppercase font-bold text-[9px]">
-                          {preset.provider}
-                        </span>
-                        <span className="text-blue-600 font-bold group-hover:underline flex items-center gap-0.5">
-                          <span>{isCoverMode ? "Apply Cover" : `Apply Day ${dayNumber}`}</span>
-                          <Check className="w-3 h-3 opacity-0 group-hover:opacity-100 transition" />
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        ) : (
+          /* STEP 1: BROWSING AND SELECTION VIEW */
+          <div className="flex flex-col h-full min-h-0">
+            {/* Minimal Header */}
+            <div className="px-6 py-4 pr-12 border-b border-border flex items-center justify-between shrink-0">
+              <div>
+                <DialogTitle className="text-base font-semibold text-foreground tracking-tight">
+                  {isCoverMode ? "Select cover photo" : `Choose photo for Day ${dayNumber}`}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  {isCoverMode
+                    ? "Choose a curated cover, search stock, or upload your own."
+                    : "Choose an editorial photo for this day's narrative."}
+                </DialogDescription>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* 4. TAB: STOCK SEARCH */}
-        {activeTab === "search" && (
-          <div className="flex flex-col flex-1 overflow-hidden">
-            {/* Search Input Bar & Orientation Controls */}
-            <div className="px-6 py-3 border-b border-slate-200 bg-white space-y-2 shrink-0">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                {/* Orientation Selector for Day Mode */}
-                {!isCoverMode && (
-                  <div className="flex items-center gap-1.5 border-b sm:border-b-0 sm:border-r border-slate-200 pb-2 sm:pb-0 sm:pr-3 shrink-0">
-                    <span className="text-[11px] font-bold text-slate-600 shrink-0 uppercase tracking-wider">
-                      Orientation:
-                    </span>
-                    <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOrientation("all");
-                          fetchImages(query, "all");
-                        }}
-                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition ${
-                          orientation === "all"
-                            ? "bg-white text-slate-900 shadow-2xs"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOrientation("portrait");
-                          fetchImages(query, "portrait");
-                        }}
-                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition flex items-center gap-1 ${
-                          orientation === "portrait"
-                            ? "bg-[#091c3e] text-white shadow-2xs"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        <span>Portrait</span>
-                        <span className="text-[10px] font-bold">▯</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOrientation("landscape");
-                          fetchImages(query, "landscape");
-                        }}
-                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition flex items-center gap-1 ${
-                          orientation === "landscape"
-                            ? "bg-white text-slate-900 shadow-2xs"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        <span>Landscape</span>
-                        <span className="text-[10px] font-bold">▭</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Search Form */}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    fetchImages(query);
+              {currentImage && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onSelectImage(null);
+                    onClose();
                   }}
-                  className="flex-1 flex gap-2"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
                 >
+                  Reset to auto
+                </Button>
+              )}
+            </div>
+
+            {/* Navigation Tabs & Region Dropdown (responsive wrapping for mobile) */}
+            <Tabs
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <div className="px-6 py-2 border-b border-border/70 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 bg-muted/20 shrink-0">
+                <TabsList variant="line" className="h-8 gap-2 bg-transparent p-0 border-0">
+                  {isCoverMode && (
+                    <TabsTrigger
+                      value="suggested"
+                      className="text-xs font-medium px-3 py-1 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold"
+                    >
+                      Suggested
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger
+                    value="search"
+                    className="text-xs font-medium px-3 py-1 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold"
+                  >
+                    Search stock
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="upload"
+                    className="text-xs font-medium px-3 py-1 text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold"
+                  >
+                    Upload
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Region Select Filter (Suggested tab only) */}
+                {activeTab === "suggested" && isCoverMode && (
+                  <Select value={selectedRegion} onValueChange={(val) => val && setSelectedRegion(val)}>
+                    <SelectTrigger className="h-7.5 w-44 text-xs font-medium bg-background border-border">
+                      <SelectValue placeholder="All regions" />
+                    </SelectTrigger>
+                    <SelectContent align="end">
+                      {regions.map((region) => (
+                        <SelectItem key={region} value={region} className="text-xs">
+                          {region === "Matching" && destinationFallback
+                            ? `Matching (${destinationFallback})`
+                            : region === "All"
+                            ? "All regions"
+                            : region}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* TAB 1: SUGGESTED COVERS */}
+              {isCoverMode && (
+                <TabsContent value="suggested" className="flex-1 min-h-0 overflow-y-auto p-6 m-0 focus-visible:outline-none">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {filteredPresets.map((preset) => {
+                      const isBroken = brokenImages[preset.id];
+
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() =>
+                            handleSelectCandidate(preset.imageUrl, {
+                              provider: preset.provider,
+                              photoId: preset.id,
+                              photographerName: preset.photographerName,
+                              photographerUrl: preset.photographerUrl,
+                            })
+                          }
+                          className="group relative aspect-[1/1.414] rounded-xl overflow-hidden border border-border/80 bg-muted hover:border-foreground/40 hover:shadow-lg transition-all duration-200 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {isBroken ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-muted text-muted-foreground">
+                              <ImageIcon className="w-6 h-6 mb-1.5 opacity-40" />
+                              <span className="text-xs font-medium">Couldn&apos;t load</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={preset.thumbnailUrl}
+                              alt={preset.title}
+                              loading="lazy"
+                              onError={() =>
+                                setBrokenImages((prev) => ({ ...prev, [preset.id]: true }))
+                              }
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+                            />
+                          )}
+
+                          {/* Attribution Overlay on hover (DESIGN.md 7.12) */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3.5 text-white pointer-events-none">
+                            <div className="text-xs font-semibold leading-tight line-clamp-1 drop-shadow-sm">
+                              {preset.title}
+                            </div>
+                            <div className="text-[11px] text-white/80 mt-0.5 font-normal drop-shadow-sm line-clamp-1">
+                              {preset.region} · Photo by {preset.photographerName}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+              )}
+
+              {/* TAB 2: SEARCH STOCK */}
+              <TabsContent value="search" className="flex-1 min-h-0 overflow-y-auto p-6 m-0 focus-visible:outline-none space-y-4">
+                <div className="flex items-center gap-2.5 max-w-lg w-full">
                   <div className="relative flex-1">
-                    <label htmlFor="image-picker-search" className="sr-only">
-                      Search photo keywords
-                    </label>
-                    <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" aria-hidden="true" />
-                    <input
-                      id="image-picker-search"
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <Input
                       type="text"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder={
-                        isCoverMode
-                          ? "Search vertical cover imagery (e.g. Dubai skyline dusk, Bali rice terrace drone)..."
-                          : "Search photos (e.g. Dal Lake shikara sunset, Gulmarg snow, Luxury resort)..."
-                      }
-                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 shrink-0"
-                  >
-                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                    Search
-                  </button>
-                </form>
-              </div>
-
-              {/* Quick Suggestion Pills */}
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 overflow-x-auto pb-1">
-                <span className="font-medium shrink-0">
-                  {isCoverMode ? "Editorial Modifiers:" : "Suggestions:"}
-                </span>
-
-                {destinationFallback && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuery(destinationFallback);
-                      fetchImages(destinationFallback);
-                    }}
-                    className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shrink-0 font-medium"
-                  >
-                    ★ {destinationFallback}
-                  </button>
-                )}
-
-                {isCoverMode ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = `${destinationFallback || "Dubai"} aerial drone vertical`;
-                        setQuery(q);
-                        fetchImages(q);
-                      }}
-                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shrink-0"
-                    >
-                      Aerial Drone
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = `${destinationFallback || "Bali"} golden hour sunset vertical`;
-                        setQuery(q);
-                        fetchImages(q);
-                      }}
-                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shrink-0"
-                    >
-                      Golden Hour
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = `${destinationFallback || "Switzerland"} iconic landmark vertical`;
-                        setQuery(q);
-                        fetchImages(q);
-                      }}
-                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shrink-0"
-                    >
-                      Iconic Landmark
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = `${destinationFallback || "Travel"} landscape`;
-                        setQuery(q);
-                        fetchImages(q);
-                      }}
-                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shrink-0"
-                    >
-                      Landscape View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = `${destinationFallback || "Luxury"} resort hotel`;
-                        setQuery(q);
-                        fetchImages(q);
-                      }}
-                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shrink-0"
-                    >
-                      Resort & Stay
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = `${destinationFallback || "Tour"} sightseeing landmark`;
-                        setQuery(q);
-                        fetchImages(q);
-                      }}
-                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shrink-0"
-                    >
-                      Sightseeing & Culture
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Photo Grid Results */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-              {isLoading ? (
-                <div className="py-20 flex flex-col items-center justify-center text-slate-400">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-                  <div className="text-xs font-medium">
-                    {isCoverMode
-                      ? "Querying high-resolution vertical photography across Unsplash, Pexels, Pixabay & Wikimedia..."
-                      : `Querying ${orientation} photography across stock providers...`}
-                  </div>
-                </div>
-              ) : error ? (
-                <div className="py-16 text-center text-xs text-red-600 font-medium">{error}</div>
-              ) : images.length === 0 ? (
-                <div className="py-16 text-center text-slate-400">
-                  <ImageIcon className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-                  <div className="text-sm font-semibold text-slate-700">No photos found</div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Try searching with broader destination terms or switching orientation to &quot;All&quot;.
-                  </p>
-                </div>
-              ) : (
-                <div
-                  className={
-                    isCoverMode
-                      ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-                      : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
-                  }
-                >
-                  {images.map((img) => (
-                    <div
-                      key={img.photoId}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleSelectNormalized(img)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
+                        if (e.key === "Enter") {
                           e.preventDefault();
-                          handleSelectNormalized(img);
+                          fetchImages(query);
                         }
                       }}
-                      className="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-[#091c3e] hover:shadow-xl transition-all cursor-pointer flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                    >
-                      {/* Photo Thumbnail */}
-                      <div
-                        className={`relative overflow-hidden bg-slate-900 ${
+                      placeholder="Search stock photos (e.g. Phuket, Bali, Alps)…"
+                      className="h-9 pl-9 pr-8 text-xs font-medium bg-muted/40 border border-border hover:border-foreground/30 focus-visible:bg-background focus-visible:border-primary rounded-lg transition-colors shadow-2xs"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        onClick={() => setQuery("")}
+                        aria-label="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-muted transition-colors cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => fetchImages(query)}
+                    disabled={isLoading || !query.trim()}
+                    className="h-9 px-4 text-xs font-semibold shrink-0 rounded-lg border border-border hover:bg-secondary/80 transition-colors"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                    ) : (
+                      <Search className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    <span>Search</span>
+                  </Button>
+                </div>
+
+                {error && (
+                  <div className="text-xs text-destructive font-medium p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
+                    {error}
+                  </div>
+                )}
+
+                {isLoading ? (
+                  <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Searching stock photos…</span>
+                  </div>
+                ) : images.length === 0 ? (
+                  <div className="py-20 text-center text-xs text-muted-foreground">
+                    No photos found. Try a different search query.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {images.map((img) => (
+                      <button
+                        key={img.photoId}
+                        type="button"
+                        onClick={() =>
+                          handleSelectCandidate(img.fullUrl, {
+                            provider: img.provider,
+                            photoId: img.photoId,
+                            photographerName: img.photographerName,
+                            photographerUrl: img.photographerUrl,
+                            downloadLocation: img.downloadLocation,
+                          })
+                        }
+                        className={`group relative rounded-xl overflow-hidden border border-border/80 bg-muted hover:border-foreground/40 hover:shadow-lg transition-all duration-200 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                           isCoverMode ? "aspect-[1/1.414]" : "aspect-square"
                         }`}
                       >
                         <img
                           src={img.thumbUrl}
-                          alt={img.altDescription || "Scenic view"}
+                          alt={img.altDescription || "Stock photo"}
                           loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
                         />
-
-                        {/* Safe Zone Guide Overlay for Cover Mode */}
-                        {isCoverMode && showSafeZone && (
-                          <div className="absolute inset-0 pointer-events-none flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <div className="h-[20%] bg-blue-900/30 border-b border-blue-400/50 flex items-center justify-center p-1">
-                              <span className="text-[9px] font-black uppercase text-white/90 drop-shadow">
-                                Logo Bar
-                              </span>
-                            </div>
-                            <div className="flex-1 border-2 border-emerald-400/60 m-1 rounded flex items-center justify-center bg-emerald-500/10">
-                              <span className="text-[9px] font-black uppercase text-emerald-200 drop-shadow">
-                                Safe Zone
-                              </span>
-                            </div>
-                            <div className="h-[35%] bg-slate-950/60 border-t border-slate-400/40 flex items-center justify-center p-1">
-                              <span className="text-[9px] font-black uppercase text-white/90 drop-shadow">
-                                Title Vignette
-                              </span>
-                            </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3.5 text-white pointer-events-none">
+                          <div className="text-xs font-medium leading-tight line-clamp-1 drop-shadow-sm">
+                            {img.altDescription || "Stock photograph"}
                           </div>
-                        )}
-
-                        {/* Orientation Badge for Day Mode */}
-                        {!isCoverMode && (
-                          <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-[8.5px] font-semibold backdrop-blur-xs flex items-center gap-1">
-                            <span>{img.orientation === "portrait" ? "▯ Portrait" : "▭ Landscape"}</span>
-                          </span>
-                        )}
-
-                        {/* Provider Badge */}
-                        <span
-                          className={`absolute top-2 right-2 text-[9.5px] uppercase font-bold px-1.5 py-0.5 rounded shadow ${
-                            img.provider === "unsplash"
-                              ? "bg-black/75 text-white"
-                              : img.provider === "pexels"
-                              ? "bg-emerald-700/80 text-white"
-                              : img.provider === "pixabay"
-                              ? "bg-amber-600/80 text-white"
-                              : "bg-blue-700/80 text-white"
-                          }`}
-                        >
-                          {img.provider}
-                        </span>
-                      </div>
-
-                      {/* Photo Metadata Footer */}
-                      <div className="p-3 flex flex-col justify-between flex-1 bg-white">
-                        <div>
-                          <div className="text-xs font-semibold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition">
-                            {img.altDescription || "Scenic destination photography"}
-                          </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
-                            <span>By</span>
-                            <span className="text-slate-600 font-medium truncate max-w-[120px]">
-                              {img.photographerName}
-                            </span>
+                          <div className="text-[11px] text-white/80 mt-0.5 drop-shadow-sm">
+                            Photo by {img.photographerName}
                           </div>
                         </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
 
-                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider">
-                            {img.width && img.height ? `${img.width}×${img.height}` : img.provider}
-                          </span>
-                          <span className="text-[11px] font-bold text-blue-600 group-hover:underline flex items-center gap-0.5">
-                            <span>{isCoverMode ? "Apply Cover" : `Apply Day ${dayNumber}`}</span>
-                            <Check className="w-3 h-3 opacity-0 group-hover:opacity-100 transition" />
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 5. TAB: CUSTOM UPLOAD & INTERACTIVE CROPPER */}
-        {activeTab === "upload" && (
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-slate-950">
-            {uploadedDataUrl ? (
-              <CoverImageCropper
-                imageSrc={uploadedDataUrl}
-                mode={isCoverMode ? "cover" : "day"}
-                dayNumber={dayNumber}
-                onApplyCrop={handleApplyCropped}
-                onCancel={() => {
-                  setUploadedDataUrl(null);
-                  setUploadedFileName("");
-                }}
-              />
-            ) : (
-              <div className="flex-1 overflow-y-auto p-6 bg-slate-50 flex flex-col items-center justify-center">
-                <div className="max-w-md w-full bg-white rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center space-y-4 shadow-sm hover:border-blue-500 transition">
-                  <div className="w-14 h-14 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-                    <Upload className="w-7 h-7" />
+              {/* TAB 3: UPLOAD (adaptive vertical padding) */}
+              <TabsContent value="upload" className="flex-1 min-h-0 p-6 m-0 focus-visible:outline-none">
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-8 sm:py-12 text-center transition flex flex-col items-center justify-center gap-3 ${
+                    dragOver
+                      ? "border-primary bg-primary/5"
+                      : "border-border/80 hover:border-muted-foreground/40 bg-muted/10"
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                    <Upload className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">
-                      {isCoverMode
-                        ? "Upload Custom Cover Photo"
-                        : `Upload Custom Photo for Day ${dayNumber}`}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                      {isCoverMode
-                        ? "Supports JPG, PNG, WebP up to 15MB. Pan, zoom, and frame the 1:1.414 portrait crop with live safe-zone overlays."
-                        : `Upload photos for Day ${dayNumber}. Pan, zoom, and crop to a 1:1 square for the PDF proposal.`}
+                    <p className="text-sm font-semibold text-foreground">
+                      Drop your photo here, or browse
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Supports JPEG, PNG, and WebP (up to 20 MB)
                     </p>
                   </div>
-                  <div>
-                    <label
-                      htmlFor="custom-file-input"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#091c3e] hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow transition"
-                    >
-                      <Upload className="w-4 h-4" />
-                      <span>Browse Photo From Computer</span>
-                    </label>
+
+                  <label className="cursor-pointer mt-1">
                     <input
-                      id="custom-file-input"
                       type="file"
                       accept="image/*"
                       onChange={handleFileUpload}
                       className="sr-only"
                     />
-                  </div>
+                    <span className="inline-flex items-center justify-center rounded-md text-xs font-semibold h-8 px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border transition">
+                      Choose file
+                    </span>
+                  </label>
                 </div>
-              </div>
-            )}
+              </TabsContent>
+            </Tabs>
           </div>
         )}
-
-        {/* 6. MODAL FOOTER (Hidden when cropper has its own controls) */}
-        {!(activeTab === "upload" && uploadedDataUrl) && (
-          <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-            <div className="text-xs text-slate-500">
-              {isCoverMode ? (
-                <span>
-                  Tip: Press <kbd className="px-1.5 py-0.5 bg-slate-200 rounded text-[10px] font-mono">ESC</kbd> to close.
-                </span>
-              ) : (
-                <span>
-                  Day {dayNumber} photo: displayed on the right side of the day timeline, cropped to a 1:1 square.
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg transition"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

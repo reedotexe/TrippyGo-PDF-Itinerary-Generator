@@ -7,19 +7,20 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Check,
-  X,
-  Eye,
-  Loader2,
-  Sparkles,
-  Layers,
   Crop,
+  Loader2,
+  Check,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 
 interface CoverImageCropperProps {
   imageSrc: string;
   mode?: "cover" | "day";
   dayNumber?: number;
+  packageTitle?: string;
+  guestName?: string;
   onApplyCrop: (croppedDataUrl: string) => void;
   onCancel: () => void;
 }
@@ -28,18 +29,20 @@ export default function CoverImageCropper({
   imageSrc,
   mode = "cover",
   dayNumber = 1,
+  packageTitle,
+  guestName,
   onApplyCrop,
   onCancel,
 }: CoverImageCropperProps) {
   const isCoverMode = mode === "cover";
 
-  // Aspect ratio: 1:1.414 (0.7071) for A4 Cover; 1:1 for Day square
+  // Aspect ratio: 1:1.414 for A4 Cover; 1:1 for Day square
   const aspect = isCoverMode ? 1 / 1.414 : 1;
 
   const [crop, setCrop] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-  const [showSafeZone, setShowSafeZone] = useState<boolean>(true);
+  const [showGuides, setShowGuides] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,9 +56,9 @@ export default function CoverImageCropper({
     try {
       setIsProcessing(true);
       setError(null);
-      // High-res output: up to 2000px on the longest edge with 90% quality JPEG
-      const maxDim = isCoverMode ? 2480 : 1200;
-      const croppedDataUrl = await getCroppedImg(imageSrc, croppedAreaPixels, maxDim, 0.90);
+      // High-res output optimized for PDF print (1600px A4 / 1000px square at 0.85 quality prevents multi-MB memory bloat)
+      const maxDim = isCoverMode ? 1600 : 1000;
+      const croppedDataUrl = await getCroppedImg(imageSrc, croppedAreaPixels, maxDim, 0.85);
       onApplyCrop(croppedDataUrl);
     } catch (err) {
       console.error("Cropping failed:", err);
@@ -64,63 +67,61 @@ export default function CoverImageCropper({
     }
   };
 
-  const handleResetZoom = () => {
+  const handleReset = () => {
     setZoom(1);
     setCrop({ x: 0, y: 0 });
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 h-full w-full bg-slate-950 text-white select-none">
+    <div className="flex flex-col flex-1 min-h-0 h-full w-full bg-background text-foreground select-none">
       {/* 1. Header Toolbar */}
-      <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between shrink-0">
+      <div className="px-6 py-3 pr-12 border-b border-border bg-card flex items-center justify-between shrink-0">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center text-xs font-bold">
-              <Crop className="w-3.5 h-3.5" />
-            </span>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-              {isCoverMode
-                ? "Interactive A4 Portrait Cropper (1:1.414)"
-                : `Interactive Square Cropper for Day ${dayNumber} (1:1)`}
+            <Crop className="w-4 h-4 text-primary shrink-0" />
+            <h3 className="text-sm font-semibold text-foreground">
+              {isCoverMode ? "Adjust cover photo" : `Adjust photo for Day ${dayNumber}`}
             </h3>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {isCoverMode
-              ? "Drag and zoom photo. Keep the key subject in the center 45% safe focal window."
-              : "Drag and zoom photo to frame the hotel, view, or activity perfectly for the PDF proposal."}
+              ? "Drag to position. Keep the main subject between the shaded areas."
+              : "Drag to frame the subject for the itinerary proposal."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Safe Zone Toggle (especially for Cover mode) */}
-          <button
-            type="button"
-            onClick={() => setShowSafeZone(!showSafeZone)}
-            title="Toggle PDF safe-zone layout guide"
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition flex items-center gap-1.5 ${
-              showSafeZone
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>Safe Zone {showSafeZone ? "ON" : "OFF"}</span>
-          </button>
+        <div className="flex items-center gap-3">
+          {/* Guides Toggle */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Switch
+              id="cropper-guides-toggle"
+              size="sm"
+              checked={showGuides}
+              onCheckedChange={setShowGuides}
+              aria-label="Show framing guides"
+            />
+            <label htmlFor="cropper-guides-toggle" className="cursor-pointer font-medium">
+              Guides
+            </label>
+          </div>
 
-          <button
+          {/* Reset Position */}
+          <Button
             type="button"
-            onClick={handleResetZoom}
-            title="Reset Zoom & Position"
-            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1"
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            title="Reset position and zoom"
+            className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1"
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset</span>
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* 2. Interactive Cropper Canvas Area */}
-      <div className="relative flex-1 min-h-[300px] bg-slate-950 overflow-hidden">
+      {/* 2. Interactive Cropper Canvas */}
+      <div className="relative flex-1 min-h-[340px] bg-neutral-950 overflow-hidden">
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -129,72 +130,62 @@ export default function CoverImageCropper({
           onCropChange={setCrop}
           onZoomChange={setZoom}
           onCropComplete={onCropComplete}
-          showGrid={!showSafeZone}
+          showGrid={!showGuides}
           style={{
-            containerStyle: { background: "#020617" },
+            containerStyle: { background: "#0a0a0a" },
             cropAreaStyle: {
-              border: "2px solid #38bdf8",
-              boxShadow: "0 0 0 9999em rgba(2, 6, 23, 0.78)",
+              border: "2px solid var(--primary)",
+              boxShadow: "0 0 0 9999em rgba(0, 0, 0, 0.75)",
             },
           }}
         />
 
-        {/* Live Safe Zone Ghost Overlay */}
-        {showSafeZone && (
+        {/* Framing Guides Overlay */}
+        {showGuides && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            {/* The cropped area dimensions mirror the active crop box */}
             <div
-              className={`relative pointer-events-none border-2 border-dashed border-amber-400/80 shadow-2xl flex flex-col justify-between overflow-hidden ${
+              className={`relative pointer-events-none border border-border/40 shadow-2xl flex flex-col justify-between overflow-hidden ${
                 isCoverMode ? "aspect-[1/1.414] h-[82%]" : "aspect-square h-[82%]"
               }`}
             >
               {isCoverMode ? (
                 <>
-                  {/* Top 20%: TrippyGo Trust Bar & Logo Safe Zone */}
-                  <div className="h-[20%] bg-blue-950/60 border-b border-blue-400/50 flex flex-col items-center justify-center p-2 text-center backdrop-blur-2xs">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 drop-shadow">
-                      ★ TrippyGo Header Zone (0 - 20%)
-                    </span>
-                    <span className="text-[8px] text-white/80">
-                      Top trust badges & logo will sit here
+                  {/* Top Shaded Area: Logo Area (0 - 20%) */}
+                  <div className="h-[20%] bg-neutral-900/60 border-b border-border/30 flex items-center justify-center p-2 text-center backdrop-blur-2xs">
+                    <span className="text-xs font-medium text-white/80 tracking-wide select-none">
+                      Logo area
                     </span>
                   </div>
 
-                  {/* Center 45%: Unobstructed Focal Window */}
-                  <div className="flex-1 border-2 border-emerald-400/70 m-1.5 rounded-lg flex flex-col items-center justify-center bg-emerald-500/10">
-                    <span className="text-xs font-black uppercase tracking-widest text-emerald-300 drop-shadow">
-                      ◎ Primary Focal Window (20 - 65%)
-                    </span>
-                    <span className="text-[8.5px] text-emerald-200/90 mt-0.5">
-                      Keep mountains, monuments, or landmarks centered here
-                    </span>
-                  </div>
+                  {/* Center Clear Window: Unobstructed focal subject */}
+                  <div className="flex-1" />
 
-                  {/* Bottom 35%: Title Card & Vignette Area */}
-                  <div className="h-[35%] bg-slate-950/75 border-t border-slate-400/50 flex flex-col justify-end p-2.5 backdrop-blur-2xs">
-                    <span className="text-[10px] font-black uppercase text-amber-300 drop-shadow">
-                      Title Card Vignette (65 - 100%)
-                    </span>
-                    <span className="text-[8px] text-slate-300">
-                      Destination, nights, and client name are placed here
-                    </span>
+                  {/* Bottom Shaded Area: Live Title & Guest Overlay (65 - 100%) */}
+                  <div className="h-[35%] bg-neutral-900/65 border-t border-border/30 flex flex-col items-center justify-center p-3 text-center backdrop-blur-2xs">
+                    {packageTitle ? (
+                      <div className="w-full px-2 text-center select-none">
+                        <div className="text-xs sm:text-sm font-serif font-bold text-white line-clamp-2 leading-tight drop-shadow-sm">
+                          {packageTitle}
+                        </div>
+                        {guestName && (
+                          <div className="text-[10px] text-white/80 mt-0.5 uppercase tracking-wider font-sans font-medium line-clamp-1 drop-shadow-sm">
+                            Prepared for {guestName}
+                          </div>
+                        )}
+                        <span className="text-[9px] text-white/45 tracking-wider uppercase mt-1 block">
+                          Title area
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-medium text-white/80 tracking-wide select-none">
+                        Title area
+                      </span>
+                    )}
                   </div>
                 </>
               ) : (
-                /* Day Mode Square Safe Zone */
-                <div className="w-full h-full border border-emerald-400/60 p-2 flex flex-col justify-between bg-emerald-500/5">
-                  <div className="flex justify-between items-center text-[9px] font-bold text-emerald-300">
-                    <span>1:1 Square Framing</span>
-                    <span>PDF Right-Side Preview</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-xs font-bold text-white drop-shadow">
-                      Day {dayNumber} Editorial Photo
-                    </span>
-                  </div>
-                  <div className="text-[8.5px] text-slate-300 text-center">
-                    Subject will be centered beside day narrative
-                  </div>
+                <div className="w-full h-full flex items-center justify-center border border-border/40">
+                  <span className="text-xs font-medium text-white/80">Photo frame</span>
                 </div>
               )}
             </div>
@@ -203,71 +194,82 @@ export default function CoverImageCropper({
       </div>
 
       {/* 3. Bottom Controls Bar */}
-      <div className="px-6 py-4 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-        {/* Zoom Slider */}
+      <div className="px-6 py-3.5 bg-card border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+        {/* Zoom Control with shadcn Slider */}
         <div className="flex items-center gap-3 w-full sm:w-72">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setZoom((z) => Math.max(1, z - 0.1))}
-            className="text-slate-400 hover:text-white transition"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
             aria-label="Zoom out"
           >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.05}
-            value={zoom}
-            onChange={(e) => setZoom(parseFloat(e.target.value))}
-            className="flex-1 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-            aria-label="Zoom level"
-          />
-          <button
+            <ZoomOut className="w-3.5 h-3.5" />
+          </Button>
+          <div className="flex-1">
+            <Slider
+              value={[zoom]}
+              min={1}
+              max={3}
+              step={0.05}
+              onValueChange={(vals) => {
+                const nextVal = Array.isArray(vals) ? vals[0] : Number(vals);
+                if (!isNaN(nextVal)) setZoom(nextVal);
+              }}
+              aria-label="Zoom level"
+            />
+          </div>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setZoom((z) => Math.min(3, z + 0.1))}
-            className="text-slate-400 hover:text-white transition"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
             aria-label="Zoom in"
           >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-mono text-slate-400 w-10 text-right">
+            <ZoomIn className="w-3.5 h-3.5" />
+          </Button>
+          <span className="text-xs font-mono text-muted-foreground w-9 text-right shrink-0">
             {zoom.toFixed(1)}×
           </span>
         </div>
 
-        {error && <div className="text-xs text-red-400 font-medium">{error}</div>}
+        {error && <div className="text-xs text-destructive font-medium">{error}</div>}
 
-        {/* Action Buttons */}
+        {/* Action Buttons: Cancel/Back and Single Primary Action */}
         <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onCancel}
             disabled={isProcessing}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold rounded-lg border border-slate-700 transition"
+            className="h-8 text-xs text-muted-foreground hover:text-foreground"
           >
-            Cancel
-          </button>
+            Back to photos
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="default"
+            size="sm"
             onClick={handleApply}
             disabled={isProcessing || !croppedAreaPixels}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-md transition flex items-center gap-1.5 disabled:opacity-50"
+            className="h-8 text-xs font-semibold gap-1.5"
           >
             {isProcessing ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Cropping & Slicing...</span>
+                <span>Saving…</span>
               </>
             ) : (
               <>
                 <Check className="w-3.5 h-3.5" />
-                <span>{isCoverMode ? "Apply A4 Cover Photo" : `Apply Day ${dayNumber} Photo`}</span>
+                <span>{isCoverMode ? "Use as cover" : "Use photo"}</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

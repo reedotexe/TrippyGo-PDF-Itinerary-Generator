@@ -13,9 +13,14 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/brand") ||
     pathname.startsWith("/fonts") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/.well-known") ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
     pathname === "/login" ||
     pathname === "/set-password" ||
     pathname === "/reset-password" ||
+    pathname === "/health" ||
+    pathname === "/api/health" ||
     pathname.startsWith("/print") // Print is strictly sessionless, guarded by 60s HMAC token
   ) {
     return NextResponse.next();

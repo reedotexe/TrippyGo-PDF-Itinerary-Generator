@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { ChangePasswordModal } from "./ChangePasswordModal";
 
 interface WorkbenchHeaderProps {
   searchQuery: string;
@@ -47,6 +48,7 @@ export function WorkbenchHeader({
 }: WorkbenchHeaderProps) {
   const router = useRouter();
   const { data: sessionData } = useSession();
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const user = sessionData?.user;
   const isAdmin = user?.role === "admin";
 
@@ -209,7 +211,7 @@ export function WorkbenchHeader({
                 )}
 
                 <DropdownMenuItem
-                  onClick={() => router.push("/reset-password")}
+                  onClick={() => setIsChangePasswordOpen(true)}
                   className="cursor-pointer text-xs"
                 >
                   <KeyRound className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
@@ -266,6 +268,11 @@ export function WorkbenchHeader({
           )}
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </header>
   );
 }

@@ -384,7 +384,50 @@ export function normalizeRawExtractedJson(raw: any): any {
   // 8. Meta & Variants
   doc.meta = doc.meta || { sourceFile: null, extractedBy: null, reviewFlags: [] };
   if (!Array.isArray(doc.meta.reviewFlags)) doc.meta.reviewFlags = [];
-  doc.variants = Array.isArray(doc.variants) ? doc.variants : [];
+
+  doc.variants = Array.isArray(doc.variants)
+    ? doc.variants
+        .filter((v: any) => v && typeof v === "object")
+        .map((v: any, idx: number) => {
+          let netPaise = 0;
+          if (typeof v.netAmountPaise === "number" && v.netAmountPaise >= 0) {
+            netPaise = Math.round(v.netAmountPaise);
+          } else if (typeof v.netAmount === "number" && v.netAmount >= 0) {
+            netPaise = Math.round(v.netAmount * 100);
+          } else {
+            const candidateStr = v.price || v.cost || v.rate || v.totalAmount || v.amount;
+            if (typeof candidateStr === "string") {
+              const num = parseInt(candidateStr.replace(/[^\d]/g, ""), 10);
+              if (!isNaN(num) && num > 0) netPaise = num * 100;
+            } else if (typeof candidateStr === "number" && candidateStr >= 0) {
+              netPaise = Math.round(candidateStr * 100);
+            }
+          }
+
+          const name = String(v.name || v.option || v.tier || v.title || `Option ${idx + 1}`).trim() || `Option ${idx + 1}`;
+          const id = String(v.id || `var_${idx + 1}`).trim();
+          const description = typeof v.description === "string" ? v.description.trim() : undefined;
+
+          const hotels = Array.isArray(v.hotels)
+            ? v.hotels
+                .filter((h: any) => h && typeof h === "object")
+                .map((h: any) => ({
+                  dayNumber: Number(h.dayNumber) || 1,
+                  hotel: String(h.hotel || "").trim(),
+                  city: typeof h.city === "string" ? h.city.trim() : undefined,
+                }))
+                .filter((h: any) => h.hotel)
+            : undefined;
+
+          return {
+            id,
+            name,
+            description,
+            netAmountPaise: netPaise,
+            hotels: hotels && hotels.length > 0 ? hotels : undefined,
+          };
+        })
+    : [];
 
   return doc;
 }

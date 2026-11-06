@@ -115,6 +115,14 @@ Return a single valid JSON object strictly matching this structure:
     "payment": ["String"],
     "cancellation": [{ "window": "String", "charge": "String" }]
   },
+  "variants": [
+    {
+      "id": "var_1",
+      "name": "4-Star Deluxe Option",
+      "netAmountPaise": 6200000,
+      "description": "Optional tier or alternate hotel package"
+    }
+  ],
   "meta": {
     "sourceFile": null,
     "extractedBy": null,

@@ -8,6 +8,7 @@ const s3Region = process.env.S3_REGION || "ap-south-1";
 const s3Endpoint = process.env.S3_ENDPOINT || undefined;
 
 let s3Client: S3Client | null = null;
+let publicS3Client: S3Client | null = null;
 
 function getS3Client(): S3Client {
   if (!s3Client) {
@@ -22,6 +23,22 @@ function getS3Client(): S3Client {
     });
   }
   return s3Client;
+}
+
+function getPublicS3Client(): S3Client {
+  const publicEndpoint = process.env.S3_PUBLIC_ENDPOINT || s3Endpoint;
+  if (!publicS3Client) {
+    publicS3Client = new S3Client({
+      region: s3Region,
+      endpoint: publicEndpoint,
+      forcePathStyle: !!publicEndpoint,
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID || "minioadmin",
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "minioadmin",
+      },
+    });
+  }
+  return publicS3Client;
 }
 
 export interface UploadOptions {
@@ -120,7 +137,7 @@ export async function getPresignedDownloadUrl(key: string, expiresIn: number = 3
   }
 
   try {
-    const client = getS3Client();
+    const client = getPublicS3Client();
     const command = new GetObjectCommand({
       Bucket: s3Bucket,
       Key: key,
