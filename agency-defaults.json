@@ -25,27 +25,33 @@
   },
   "pricing": {
     "defaultBasis": "per_person_twin_sharing",
-    "childWithBedFactor": 0.70,
-    "childNoBedFactor": 0.40,
-    "infantFactor": 0.00,
+    "childWithBedFactor": 0.7,
+    "childNoBedFactor": 0.4,
+    "infantFactor": 0,
     "defaultMarkupPercent": 15,
     "minMarginPercent": 8,
     "overrideRules": {
       "salespersonCanOverride": true,
-      "salespersonMarginRange": [8, 30],
+      "salespersonMarginRange": [
+        8,
+        30
+      ],
       "adminOverrideRequiredBelow": 8
     },
     "quoteValidityDays": 7
   },
   "pdf": {
-    "deliveryChannels": ["download", "whatsapp_link"],
+    "deliveryChannels": [
+      "download",
+      "whatsapp_link"
+    ],
     "language": "en",
     "showSalespersonContact": true,
     "companyDetails": {
-      "phone": "+91 98765 43210",
-      "email": "holidays@trippygo.com",
-      "website": "https://trippygo.com",
-      "address": "Office 402, Trade Hub, Mumbai, Maharashtra 400001"
+      "phone": "+91 9941000075",
+      "email": "harkiran@trippygo.in",
+      "website": "https://www.trippygo.in/",
+      "address": "Eden Tower, Phase 8B, Sector 91, Mohali, Punjab"
     }
   },
   "auth": {

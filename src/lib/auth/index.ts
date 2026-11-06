@@ -5,6 +5,11 @@ import { db, user, session, account, verification } from "@/db";
 import { sendPasswordResetEmail } from "@/lib/email/resend";
 import { ac, roles } from "./permissions";
 
+const appUrl =
+  process.env.BETTER_AUTH_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://pdf.trippygo.in";
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -16,7 +21,19 @@ export const auth = betterAuth({
     },
   }),
   secret: process.env.BETTER_AUTH_SECRET || "trippygo-dev-auth-secret-32-chars-long-minimum-key",
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  baseURL: appUrl,
+  trustedOrigins: [
+    "https://pdf.trippygo.in",
+    "https://www.trippygo.in",
+    "https://trippygo.in",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+    ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
+  ],
+  advanced: {
+    trustedProxyHeaders: true,
+  },
   emailAndPassword: {
     enabled: true,
     disableSignUp: true, // Public registration strictly disabled

@@ -18,6 +18,13 @@ function getLocalUsersList(): Array<{
 }> {
   const defaults = [
     {
+      id: "usr_admin_harkiran",
+      name: "Harkiran",
+      email: "harkiran@trippygo.in",
+      role: "admin" as const,
+      password: "TrippyGo@2026Admin!",
+    },
+    {
       id: "usr_admin_1",
       name: "Agency Administrator",
       email: "admin@trippygo.com",
@@ -107,20 +114,29 @@ export async function POST(req: NextRequest) {
 
   const clonedForFallback = req.clone();
 
-  // 1. Attempt standard Better Auth handler
+  // 1. Standard Better Auth handler
   try {
     const res = await betterAuthHandlers.POST(req);
-    if (res.status >= 200 && res.status < 300) {
+    // In production or when Better Auth returns an authentic response (status < 500),
+    // return Better Auth's response directly so client receives accurate error or cookie/session.
+    if (process.env.NODE_ENV === "production" || res.status < 500) {
       return res;
     }
     if (!pathname.endsWith("/sign-in/email")) {
       return res;
     }
-  } catch {
+  } catch (err) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Better Auth POST error]:", err);
+      return NextResponse.json(
+        { message: "Authentication service temporarily unavailable", code: "AUTH_UNAVAILABLE" },
+        { status: 503 }
+      );
+    }
     // Database offline, fall through to dev fallback
   }
 
-  // 2. Dev Fallback for offline environments
+  // 2. Dev Fallback for offline environments (local development only)
   if (pathname.endsWith("/sign-in/email")) {
     try {
       const body = await clonedForFallback.json();
@@ -232,8 +248,10 @@ export async function GET(req: NextRequest) {
     if (res.status >= 200 && res.status < 400) {
       return res;
     }
-  } catch {
-    // Database offline or auth query failure
+  } catch (err) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Better Auth GET error]:", err);
+    }
   }
 
   // 2. If session cannot be resolved on /get-session, return null and clear any stale zombie cookie
